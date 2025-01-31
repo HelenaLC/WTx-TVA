@@ -1,3 +1,6 @@
 _*/
 figs/
-*/**/*.pdf
+logs/*
+outs/*
+plts/*
+!*/.gitkeep

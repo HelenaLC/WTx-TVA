@@ -46,7 +46,7 @@ ist = "outs/ist-{sid}.rds"
 lv1 = "outs/lv1-{sid}.rds"
 
 sub = "outs/sub-{sid},{sub}.rds"
-#rep = "outs/rep-{sid},{sub}.rds"
+rep = "outs/rep-{sid},{sub}.rds"
 jst = "outs/jst-{sid},{sub}.rds"
 lv2 = "outs/lv2-{sid},{sub}.rds"
 
@@ -77,6 +77,18 @@ for x,y,z in zip(foo.x, foo.y, foo.z):
 
 plt = []
 
+plt__sid = "plts/{out1},{plt},{sid}.pdf"
+plt__sid_ = "plts/{out1},{plt},{{sid}}.pdf"
+foo = glob_wildcards("code/10-plt__sid-{x},{y}.R")
+for x,y in zip(foo.x, foo.y):
+	plt += expand(plt__sid_, out1=x, plt=y)
+
+plt__sid__sid = "plts/{out1},{out2},{plt},{sid}.pdf"
+plt__sid__sid_ = "plts/{out1},{out2},{plt},{{sid}}.pdf"
+foo = glob_wildcards("code/10-plt__sid__sid-{x},{y},{z}.R")
+for x,y,z in zip(foo.x, foo.y, foo.z):
+	plt += expand(plt__sid__sid_, out1=x, out2=y, plt=z)
+
 plt__all_sid = "plts/{out1},{plt}.pdf"
 foo = glob_wildcards("code/10-plt__all_sid-{x},{y}.R")
 for x,y in zip(foo.x, foo.y):
@@ -86,12 +98,6 @@ plt__all_sid__all_sid = "plts/{out1},{out2},{plt}.pdf"
 foo = glob_wildcards("code/10-plt__all_sid__all_sid-{x},{y},{z}.R")
 for x,y,z in zip(foo.x, foo.y, foo.z):
 	plt += expand(plt__all_sid__all_sid, out1=x, out2=y, plt=z)
-
-plt__sid__sid = "plts/{out1},{out2},{plt},{sid}.pdf"
-plt__sid__sid_ = "plts/{out1},{out2},{plt},{{sid}}.pdf"
-foo = glob_wildcards("code/10-plt__sid__sid-{x},{y},{z}.R")
-for x,y,z in zip(foo.x, foo.y, foo.z):
-	plt += expand(plt__sid__sid_, out1=x, out2=y, plt=z)
 
 plt__sid_sub = "plts/{out1},{plt},{sid},{sub}.pdf"
 plt__sid_sub_ = "plts/{out1},{plt},{{sid}},{{sub}}.pdf"
@@ -145,7 +151,7 @@ rule all:
 	input:
 		expand([raw, fil, pol, pro, roi, ccc, sig, ist, lv1], sid=SID),
 		expand([sub, jst, lv2], sid=sid, sub=SUB),
-		#expand([trj], sid=SID, sub="epi"),
+		expand([rep, trj], sid=SID, sub="epi"),
 		expand(plt, sid=SID, sub=SUB)
 
 # analysis =========================================
@@ -223,24 +229,15 @@ rule ccc:
 	{input[1]} {output[0]} ths={threads}" {input[0]} {log}'''
 
 # signatures
-rule get_sig:
-	input:	"meta/sig/get.R"
-	output:	"meta/sig/lys.rds"
-	log:    "logs/get_sig.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args\
-	{output[0]}" {input[0]} {log}'''
-
 rule sig:
 	priority: 97
 	threads: 10
-	input:	"code/03-sig.R", fil,
-			rules.get_sig.output
+	input:	"code/03-sig.R", fil
 	output:	sig
 	log:    "logs/sig-{sid}.Rout"
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {output[0]} ths={threads}" {input[0]} {log}'''
+	{input[1]} {output[0]} ths={threads}" {input[0]} {log}'''
 
 # clustering
 rule ist:
@@ -269,6 +266,29 @@ rule sub:
 	input:	"code/04-sub.R", fil, lv1
 	output:	expand("outs/sub-{{sid}},{sub}.rds", sub=SUB)
 	log:    "logs/sub-{sid}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
+
+# reprocessing
+rule rep:
+	wildcard_constraints: sub = "epi"
+	threads: 20
+	priority: 96
+	input:	"code/05-rep.R", sub, pbs_lv2
+	output:	rep
+	log:    "logs/rep-{sid},{sub}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''
+
+# trajectory
+rule trj:
+	priority: 95
+	wildcard_constraints: sub = "epi"
+	input:	"code/06-trj.R", pro, roi
+	output:	trj
+	log:    "logs/trj-{sid},{sub}.Rout"
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
@@ -338,29 +358,7 @@ rule lv2:
 # 	log:    "logs/clu-{sub}.Rout"
 # 	shell: '''R CMD BATCH\\
 # 	--no-restore --no-save "--args wcs={wildcards}\
-# 	{input[1]} {output} ths={threads} res={params}" {input[0]} {log}'''
-
-# # reprocessing
-# rule rep:
-# 	threads: 20
-# 	priority: 96
-# 	input:	"code/05-rep.R", sub, pbs_lv2
-# 	output:	rep
-# 	log:    "logs/rep-{sid},{sub}.Rout"
-# 	shell: '''R CMD BATCH\\
-# 	--no-restore --no-save "--args wcs={wildcards}\
-# 	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''	
-
-# trajectory
-rule trj:
-	priority: 95
-	wildcard_constraints: sub = "epi"
-	input:	"code/06-trj.R", pro, jst
-	output:	trj
-	log:    "logs/trj-{sid},{sub}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
+# 	{input[1]} {output} ths={threads} res={params}" {input[0]} {log}'''	
 
 # # contexts
 # rule ctx:
@@ -437,6 +435,15 @@ rule plt__all_sid:
 	shell: '''R CMD BATCH\
 	--no-restore --no-save "--args wcs={wildcards}\
 	{params} {output}" {input[0]} {log}'''
+
+rule plt__sid:
+	priority: 8
+	input:	"code/10-plt__sid-{out1},{plt}.R", a_sid
+	log:	"logs/plt__sid-{out1},{plt},{sid}.Rout"
+	output:	plt__sid
+	shell: '''R CMD BATCH\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {output}" {input[0]} {log}'''
 
 rule plt__sid__sid:
 	priority: 8

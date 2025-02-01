@@ -10,14 +10,14 @@ suppressPackageStartupMessages({
 # setup
 th <- as.integer(args$ths)
 bp <- MulticoreParam(th)
-set.seed(241202)
+set.seed(250201)
 
 # loading
 sce <- readRDS(args[[1]])
 pbs <- readRDS(args[[2]])
 
 # analysis
-sce <- logNormCounts(sce, BPPARAM=bp)
+logcounts(sce) <- sweep(counts(sce), 2, sce$Area.um2, `/`)
 sel <- rownames(sce) %in% rownames(pbs)
 sce <- runPCA(sce, 
     ncomponents=30, subset_row=sel,
@@ -25,4 +25,4 @@ sce <- runPCA(sce,
 
 # saving
 rowData(sce)$sel <- sel
-saveRDS(sce, args[[3]])
+base::saveRDS(sce, args[[3]])

@@ -1,8 +1,8 @@
 # dependencies
 suppressPackageStartupMessages({
     library(AUCell)
+    library(msigdbr)
     library(scuttle)
-    library(jsonlite)
     library(HDF5Array)
     library(BiocParallel)
     library(SingleCellExperiment)
@@ -11,29 +11,38 @@ suppressPackageStartupMessages({
 # setup
 th <- as.integer(args$ths)
 bp <- MulticoreParam(th)
-set.seed(241008)
+set.seed(250131)
 
 # loading
 sce <- readRDS(args[[1]])
-lys <- readRDS(args[[2]])
+df <- msigdbr()
 
-# wrangling
-sce <- logNormCounts(sce, BPPARAM=bp)
-set <- lapply(lys, intersect, rownames(sce))
-sapply(lys, length); sapply(set, length)
-length(unique(unlist(set))); length(set)
+# retrieve sets
+pat <- c(
+    "HALLMARK",
+    "DESCARTES_FETAL_INTESTINE")
+pat <- paste(pat, collapse="|")
+fd <- df[grepl(pat, df$gs_name), ]
 
-# analysis
+# get gene symbols by set
+fd <- fd[fd$gene_symbol %in% rownames(sce), ]
+gs <- split(fd$gene_symbol, fd$gs_name)
+range(sapply(gs, length)); length(gs)
+
+# normalize by area
+mtx <- sweep(counts(sce), 2, sce$Area.um2, `/`)
+
+# gene set scoring
 idx <- split(seq(ncol(sce)), sce$fov)
 res <- bplapply(idx, BPPARAM=bp, \(.) {
-    mtx <- as(logcounts(sce)[, ., drop=FALSE], "dgCMatrix")
+    mtx <- as(mtx[, ., drop=FALSE], "dgCMatrix")
     rnk <- AUCell_buildRankings(mtx, plotStats=FALSE, verbose=FALSE)
-    auc <- AUCell_calcAUC(set, rnk, verbose=FALSE)
+    auc <- AUCell_calcAUC(gs, rnk, verbose=FALSE)
 })
 res <- do.call(cbind, res)
 res <- res[, colnames(sce)]
 colData(res) <- colData(sce)
 
 # saving
-rowData(res)$set <- set
-saveRDS(res, args[[3]])
+rowData(res)$set <- gs
+saveRDS(res, args[[2]])

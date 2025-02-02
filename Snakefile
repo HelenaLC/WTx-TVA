@@ -47,15 +47,13 @@ lv1 = "outs/lv1-{sid}.rds"
 
 sub = "outs/sub-{sid},{sub}.rds"
 rep = "outs/rep-{sid},{sub}.rds"
+add = "outs/add-{sub}"
+trj = "outs/trj-{sub}.rds"
+
 jst = "outs/jst-{sid},{sub}.rds"
 lv2 = "outs/lv2-{sid},{sub}.rds"
+pbs = "outs/pbs-{sid},{sub}.rds"
 
-# add = "outs/add-{sub}"
-# rep = "outs/rep-{sub}.rds"
-# red = "outs/red-{sub}.rds"
-# clu = "outs/clu-{sub}.rds"
-
-trj = "outs/trj-{sid},{sub}.rds"
 add_by_sid = "outs/add_by_sid-{sid}.rds"
 add_by_sub = "outs/add_by_sub-{sub}.rds"
 
@@ -151,8 +149,10 @@ rule all:
 	input:
 		expand([raw, fil, pol, pro, roi, ccc, sig, ist, lv1], sid=SID),
 		expand([sub, jst, lv2], sid=sid, sub=SUB),
-		expand([rep, trj], sid=SID, sub="epi"),
+		expand([rep, add, trj], sid=SID, sub="epi"),
+		expand([pbs], sid=SID, sub=SUB),
 		expand(plt, sid=SID, sub=SUB)
+		#"outs/ctx.rds"
 
 # analysis =========================================
 
@@ -270,29 +270,6 @@ rule sub:
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
 
-# reprocessing
-rule rep:
-	wildcard_constraints: sub = "epi"
-	threads: 20
-	priority: 96
-	input:	"code/05-rep.R", sub, pbs_lv2
-	output:	rep
-	log:    "logs/rep-{sid},{sub}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''
-
-# trajectory
-rule trj:
-	priority: 95
-	wildcard_constraints: sub = "epi"
-	input:	"code/06-trj.R", pro, roi
-	output:	trj
-	log:    "logs/trj-{sid},{sub}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
-
 # subclustering
 rule jst:
 	priority: 96
@@ -312,7 +289,72 @@ rule lv2:
 	log:    "logs/lv2-{sid},{sub}.Rout"
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {output}" {input[0]} {log}'''		
+	{input[1]} {input[2]} {output}" {input[0]} {log}'''
+
+# # contexts
+# rule ctx:
+# 	priority: 95
+# 	threads: 30
+# 	input:	"code/06-ctx.R", 
+# 			x = expand(sub, sid=SID, sub=SUB),
+# 			y = expand(jst, sid=SID, sub=SUB)
+# 	params:	lambda wc, input: ";".join(input.x),
+# 			lambda wc, input: ";".join(input.y)
+# 	output:	"outs/ctx.rds"
+# 	log:    "logs/ctx.Rout"
+# 	shell: '''R CMD BATCH\\
+# 	--no-restore --no-save "--args wcs={wildcards}\
+# 	{params[0]} {params[1]} {output} ths={threads}" {input[0]} {log}'''	
+
+# reprocessing
+rule rep:
+	wildcard_constraints: sub = "epi"
+	threads: 20
+	priority: 94
+	input:	"code/05-rep.R", sub, pbs_lv2
+	output:	rep
+	log:    "logs/rep-{sid},{sub}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''
+
+# intergation
+rule add:
+	wildcard_constraints: sub = "epi"
+	threads: 80
+	priority: 93
+	input:	"code/06-red.R",
+			x = expand("outs/rep-{sid},{{sub}}.rds", sid=SID)
+	params: lambda wc, input: ";".join(input.x)
+	output:	directory(add)
+	log:    "logs/add-{sub}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{params} {output} ths={threads}" {input[0]} {log}'''	
+
+# trajectory
+rule trj:
+	priority: 92
+	wildcard_constraints: sub = "epi"
+	input:	"code/07-trj.R", add,
+			x = expand("outs/jst-{sid},{{sub}}.rds", sid=SID)
+	params: lambda wc, input: ";".join(input.x)
+	output:	trj
+	log:    "logs/trj-{sub}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {params} {output}" {input[0]} {log}'''	
+
+# profiles	
+rule pbs:
+	priority: 94
+	threads: 20
+	input:	"code/00-pbs.R", sub, lv2
+	output:	pbs
+	log:    "logs/pbs-{sid},{sub}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''	
 
 # # pooling
 # rule add:
@@ -359,21 +401,6 @@ rule lv2:
 # 	shell: '''R CMD BATCH\\
 # 	--no-restore --no-save "--args wcs={wildcards}\
 # 	{input[1]} {output} ths={threads} res={params}" {input[0]} {log}'''	
-
-# # contexts
-# rule ctx:
-# 	priority: 95
-# 	threads: 20
-# 	input:	"code/06-ctx.R", 
-# 			x = expand(sub, sid=SID, sub=SUB),
-# 			y = expand(jst, sid=SID, sub=SUB)
-# 	params:	lambda wc, input: ";".join(input.x),
-# 			lambda wc, input: ";".join(input.y),
-# 	output:	ctx
-# 	log:    "logs/ctx.Rout"
-# 	shell: '''R CMD BATCH\\
-# 	--no-restore --no-save "--args wcs={wildcards}\
-# 	{params[1]} {params[2]} {output} ths={threads}" {input[0]} {log}'''	
 
 # pooling
 rule add_by_sid:

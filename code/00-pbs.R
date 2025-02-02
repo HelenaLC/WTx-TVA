@@ -20,7 +20,7 @@ pbs <- aggregateAcrossCells(sce, ids[idx], statistics="mean", BPPARAM=bp)
 
 # saving
 sel <- rownames(ist$profiles)
-sel <- rownames(pbs)%in% sel
+sel <- rownames(pbs) %in% sel
 rowData(pbs)$sel <- sel
 saveRDS(pbs, args[[3]])
 

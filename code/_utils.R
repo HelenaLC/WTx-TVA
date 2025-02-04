@@ -395,7 +395,7 @@
 }
 
 # plot cluster composition by field of view
-.plt_fq <- \(z, x, y, id="", h=FALSE) {
+.plt_fq <- \(z, x, y, id="", hc=TRUE, h=FALSE) {
     library(ggplot2)
     library(SingleCellExperiment)
     # tabulate cell counts
@@ -405,8 +405,10 @@
     ys <- sort(unique(z[[y]]))
     df <- as.data.frame(ns)
     # hierarchical clustering
-    hc <- hclust(dist(prop.table(ns, 1)))
-    xo <- hc$labels[hc$order]
+    xo <- if (hc) {
+        hc <- hclust(dist(prop.table(ns, 1)))
+        hc$labels[hc$order]
+    } else rownames(ns)
     # plotting
     aes <- if (h) {
         coord_flip(expand=FALSE)
@@ -418,14 +420,13 @@
         geom_col(
             position="fill", col="white", 
             linewidth=0.1, width=1, key_glyph="point") +
-        guides(fill=guide_legend(
-            override.aes=list(shape=21, col=NA, size=2))) +
-        scale_fill_manual(NULL, values=.pal) +
+        scale_fill_manual(NULL, values=.pal_kid) +
         labs(x=x, y=NULL) +
-        ggtitle(.lab(id, ncol(z))) +
+        ggtitle(.lab(id, nrow(z))) +
         scale_x_discrete(limits=xo) +
         scale_y_continuous(n.breaks=2) +
-        .theme_black + aes + theme(axis.ticks=element_blank()) 
+        .thm_fig_d("minimal", "f") + aes + 
+        theme(axis.ticks=element_blank()) 
 }
 
 # gene x cluster heatmaps including look-up, joint & split markers
@@ -560,7 +561,7 @@
 }
 
 # spatial plot
-.plt_xy <- \(x, k, id="") {
+.plt_xy <- \(x, k, id="", s=NULL, split=TRUE) {
     # dependencies
     library(ggplot2)
     library(ggrastr)
@@ -569,26 +570,67 @@
     xy <- "Center(X|Y)_global_mm"
     xy <- grep(xy, names(colData(x)))
     names(colData(x))[xy] <- c("x", "y")
-    cs <- match(colnames(x), names(k))
-    df <- data.frame(colData(x), k=as.factor(k[cs]))
+    if (length(names(k))) {
+        cs <- match(colnames(x), names(k))
+        nk <- length(ks <- levels(k <- as.factor(k[cs])))
+        pal <- if (nk == 3) .pal_sub else .pal_kid
+        pal <- setNames(pal[seq_len(nk)], ks)
+    }
     # aesthetics
-    nk <- length(ks <- levels(df$k))
+    df <- data.frame(colData(x), k)
+    dx <- diff(range(df$x))
+    dy <- diff(range(df$y))
+    pt <- if (is.null(s)) min(dx, dy)/100/4 else s
+    # plotting
+    if (is.factor(df$k)) {
+        fd <- df[!is.na(df$k), ]
+        p0 <- ggplot(fd, aes(x, y, col=k)) + .thm_xy_d(pt) +
+            scale_color_manual(NULL, drop=FALSE, values=pal) +
+            ggtitle(.lab(id, nrow(fd)))
+        ps <- if (split) lapply(c(ks, NA), \(k) {
+            df$. <- if (is.na(k)) is.na(df$k) else grepl(sprintf("^%s$", k), df$k)
+            ggplot(df[order(df$.), ], aes(x, y, col=.)) + 
+                .thm_xy_d(pt) + theme(legend.position="none") +
+                scale_color_manual(NULL, values=c("lavender", "purple")) +
+                ggtitle(.lab(k, sum(df$.)))
+        })
+        c(list(p0), ps)
+    } else {
+        ggplot(df, aes(x, y, col=k)) + .thm_xy_c(pt) +
+            scale_color_gradientn(colors=pals::jet()) +
+            ggtitle(.lab(id, nrow(df)))
+    }
+}
+
+.plt_rgb <- \(x, id) {
+    # dependencies
+    library(ggplot2)
+    library(ggrastr)
+    library(SingleCellExperiment)
+    # wrangling
+    xy <- "Center(X|Y)_global_mm"
+    xy <- grep(xy, names(colData(x)))
+    names(colData(x))[xy] <- c("x", "y")   
+    y <- reducedDim(x, "PCA")[, seq_len(3)]
+    z <- sweep(y, 1, rowMins(y), `-`)
+    z <- sweep(z, 1, rowMaxs(z), `/`)
+    z <- apply(z, 1, \(.) rgb(.[1], .[2], .[3]))
+    df <- data.frame(colData(x), y, z)
+    # aesthetics
     dx <- diff(range(df$x))
     dy <- diff(range(df$y))
     pt <- min(dx, dy)/100/4
-    pal <- if (nk == 3) .pal_sub else .pal_kid
-    pal <- setNames(pal[seq_len(nk)], ks)
     # plotting
-    fd <- df[!is.na(df$k), ]
-    p0 <- ggplot(fd, aes(x, y, col=k)) + .thm_xy_d(pt) +
-        scale_color_manual(NULL, drop=FALSE, values=pal) +
-        ggtitle(.lab(id, nrow(fd)))
-    ps <- lapply(c(ks, NA), \(k) {
-        df$. <- if (is.na(k)) is.na(df$k) else grepl(sprintf("^%s$", k), df$k)
-        ggplot(df[order(df$.), ], aes(x, y, col=.)) + 
-            .thm_xy_d(pt) + theme(legend.position="none") +
-            scale_color_manual(NULL, values=c("lavender", "purple")) +
-            ggtitle(.lab(k, sum(df$.)))
+    p0 <- ggplot(df, aes(x, y, col=z)) + 
+        ggtitle(.lab(id, nrow(df))) +
+        scale_color_identity() + 
+        .thm_xy_d(pt)
+    ps <- lapply(colnames(y), \(.) {
+        ggplot(df, aes(x, y, col=.q(.data[[.]]))) + 
+            .thm_xy_c(pt) +
+            scale_color_gradientn(
+                paste0("q-scaled\n", ., " value"), 
+                n.breaks=6, colors=pals::jet()) 
     })
     c(list(p0), ps)
 }
@@ -752,9 +794,10 @@ suppressPackageStartupMessages({
     get(paste0("theme_", .))(6),
     theme(
         legend.key=element_blank(),
-        legend.background=element_blank(),
         plot.background=element_blank(),
-        panel.background=element_blank()))
+        panel.background=element_blank(),
+        legend.background=element_blank(),
+        plot.title=element_text(hjust=0.5)))
 
 # discrete coloring
 .thm_fig_d <- \(., l=c("c", "f")) {

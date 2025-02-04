@@ -53,6 +53,7 @@ trj = "outs/trj-{sub}.rds"
 jst = "outs/jst-{sid},{sub}.rds"
 lv2 = "outs/lv2-{sid},{sub}.rds"
 pbs = "outs/pbs-{sid},{sub}.rds"
+ctx = "outs/ctx-{sid}.rds"
 
 add_by_sid = "outs/add_by_sid-{sid}.rds"
 add_by_sub = "outs/add_by_sub-{sub}.rds"
@@ -151,8 +152,8 @@ rule all:
 		expand([sub, jst, lv2], sid=sid, sub=SUB),
 		expand([rep, add, trj], sid=SID, sub="epi"),
 		expand([pbs], sid=SID, sub=SUB),
-		expand(plt, sid=SID, sub=SUB)
-		#"outs/ctx.rds"
+		expand(plt, sid=SID, sub=SUB),
+		expand([ctx], sid=SID)
 
 # analysis =========================================
 
@@ -291,20 +292,19 @@ rule lv2:
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''
 
-# # contexts
-# rule ctx:
-# 	priority: 95
-# 	threads: 30
-# 	input:	"code/06-ctx.R", 
-# 			x = expand(sub, sid=SID, sub=SUB),
-# 			y = expand(jst, sid=SID, sub=SUB)
-# 	params:	lambda wc, input: ";".join(input.x),
-# 			lambda wc, input: ";".join(input.y)
-# 	output:	"outs/ctx.rds"
-# 	log:    "logs/ctx.Rout"
-# 	shell: '''R CMD BATCH\\
-# 	--no-restore --no-save "--args wcs={wildcards}\
-# 	{params[0]} {params[1]} {output} ths={threads}" {input[0]} {log}'''	
+# contexts
+rule ctx:
+	priority: 95
+	input:	"code/06-ctx.R", 
+			x = expand(fil, sid=SID),
+			y = expand(jst, sid=SID, sub=SUB)
+	params:	lambda wc, input: ";".join(input.x),
+			lambda wc, input: ";".join(input.y)
+	output:	expand(ctx, sid=SID)
+	log:    "logs/ctx.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{params[0]} {params[1]} {output}" {input[0]} {log}'''	
 
 # reprocessing
 rule rep:

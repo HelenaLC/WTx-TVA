@@ -38,14 +38,13 @@ df <- df |>
 .p <- \(x, i, n, xo=TRUE, yo=TRUE) {
     y <- pivot_wider(x, names_from="kid")
     z <- as.matrix(y[, -1]); rownames(z) <- y[[1]]
-    nm <- paste0(sid, ": ", sub); nk <- ncol(z)
     ggplot(x, aes(kid, sig, fill=value)) +
         (if (xo) scale_x_discrete(limits=.yo(z))) +
         (if (yo) scale_y_discrete(limits=.xo(z))) +
-        scale_fill_gradientn(
-            "z-scaled\nmean expr.",
-            colors=rev(pals::brewer.rdbu(9)),
-            limits=c(-2.5, 2.5), breaks=seq(-2, 2, 2)) +
+        scale_fill_gradient2(
+            "z-scaled\nmean AUCell",
+            low="turquoise", high="purple",
+            limits=c(-2.5, 2.5), n.breaks=5) +
         ggtitle(bquote(bold(.(i))~"(N ="~.(n)*")")) +
         geom_tile() + coord_equal(expand=FALSE) +
         .thm_fig_c("bw") + theme(
@@ -55,6 +54,7 @@ df <- df |>
             axis.text.x=element_text(angle=90, vjust=0.5, hjust=1))
 }
 
+# joint
 fd <- df |>
     # average across samples
     group_by(sig, sub, kid) |>
@@ -63,28 +63,11 @@ fd <- df |>
     group_by(sig, sub) |>
     mutate(value=.z(value)) |>
     ungroup()
-p0 <- lapply(sub, \(sub) {
-    x <- select(fd[fd$sub == sub, ], -sub)
-    .p(x, sub, length(unique(x$kid))) +
-        if (sub != "epi") theme(axis.text.y=element_blank())
+p0 <- lapply(sub, \(.) {
+    x <- select(fd[fd$sub == ., ], -sub)
+    .p(x, ., length(unique(x$kid))) + 
+        if (. != "epi") theme(axis.text.y=element_blank())
 }) |> wrap_plots(nrow=1) + plot_layout(guides="collect")
-
-# split by subset
-fd <- df |>
-    # average by sample
-    group_by(sid, sig, sub, kid) |>
-    summarise_at("value", mean) |>
-    # scale across clusters
-    group_by(sid, sig, sub) |>
-    mutate(value=.z(value)) |>
-    ungroup()
-ps <- lapply(sid, \(sid) { 
-    lapply(sub, \(sub) {
-        x <- select(fd[fd$sid == sid & fd$sub == sub, ], -c(sid, sub))
-        .p(x, paste0(sid, ": ", sub), length(unique(x$kid))) +
-            if (sub != "epi") theme(axis.text.y=element_blank())
-    }) |> wrap_plots(nrow=1) + plot_layout(guides="collect")
-})
 
 # split by sample
 fd <- df |>
@@ -95,9 +78,26 @@ fd <- df |>
     group_by(sid, sig) |>
     mutate(value=.z(value)) |>
     ungroup()
-qs <- lapply(sid, \(sid) { 
+ps <- lapply(sid, \(sid) { 
     x <- select(fd[fd$sid == sid, ], -c(sid, sub))
     .p(x, sid, length(unique(x$kid)), yo=TRUE)
+})
+
+# split by subset
+fd <- df |>
+    # average by sample
+    group_by(sid, sig, sub, kid) |>
+    summarise_at("value", mean) |>
+    # scale across clusters
+    group_by(sid, sig, sub) |>
+    mutate(value=.z(value)) |>
+    ungroup()
+qs <- lapply(sid, \(sid) { 
+    lapply(sub, \(sub) {
+        x <- select(fd[fd$sid == sid & fd$sub == sub, ], -c(sid, sub))
+        .p(x, paste0(sid, ": ", sub), length(unique(x$kid))) +
+            if (sub != "epi") theme(axis.text.y=element_blank())
+    }) |> wrap_plots(nrow=1) + plot_layout(guides="collect")
 })
 
 # saving

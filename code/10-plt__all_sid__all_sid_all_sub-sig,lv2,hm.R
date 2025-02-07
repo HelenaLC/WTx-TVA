@@ -9,36 +9,33 @@ suppressPackageStartupMessages({
 })
 
 # loading
-sce <- lapply(args[[1]], readRDS)
-ist <- lapply(args[[2]], readRDS)
-
-# wrangling
 .sid <- \(.) gsub(".*([0-9]{3}).*", "\\1", .)
 .sub <- \(.) gsub(".*(epi|imm|str).*", "\\1", .)
+auc <- mapply(
+    SIMPLIFY=FALSE, x=args[[1]], 
+    y=split(args[[2]], .sid(args[[2]])), \(x, y) {
+        sce <- readRDS(x)
+        ist <- lapply(y, readRDS)
+        kid <- lapply(ist, \(.) .$clust)
+        sub <- rep.int(.sub(y), sapply(kid, length))
+        kid <- unlist(kid); names(sub) <- names(kid)
+        idx <- intersect(colnames(sce), names(kid))
+        sid <- .sid(x); sub <- sub[idx]; kid <- kid[idx]
+        SummarizedExperiment(
+            list(counts=assay(sce[, idx])),
+            colData=data.frame(sid, sub, kid))
+    }) |> do.call(what=cbind)
 
-sid <- sort(unique(.sid(args[[1]])))
-sub <- sort(unique(.sub(args[[2]])))
-
-df <- lapply(sub, \(sub) {
-    lapply(sid, \(sid) {
-        sce <- sce[[which(.sid(args[[1]]) == sid)]]
-        ist <- ist[[which(.sid(args[[2]]) == sid & .sub(args[[2]]) == sub)]]
-        idx <- match(colnames(sce), names(kid <- ist$clust))
-        pbs <- aggregateAcrossCells(sce, kid[idx], use.assay.type="AUC", statistics="mean")
-        df <- data.frame(sid, sub, sig=rownames(pbs), assay(pbs), check.names=FALSE)
-        fd <- pivot_longer(df, all_of(colnames(pbs)), names_to="kid")
-    }) |> do.call(what=rbind)
-}) |> do.call(what=rbind)
-
-df <- df |>
-    mutate(sig=gsub("HALLMARK_", "", sig)) |>
-    mutate(sig=gsub("DESCARTES_FETAL_INTESTINE_", "", sig)) 
+pat <- "^(HALLMARK_|DESCARTES_FETAL_INTESTINE_)"
+rownames(auc) <- gsub(pat, "", rownames(auc))
 
 # plotting
-.p <- \(x, i, n, xo=TRUE, yo=TRUE) {
+.p <- \(x, i, xo=TRUE, yo=TRUE) {
+    n <- length(unique(x$kid))
+    x <- select(x, kid, name, value)
     y <- pivot_wider(x, names_from="kid")
     z <- as.matrix(y[, -1]); rownames(z) <- y[[1]]
-    ggplot(x, aes(kid, sig, fill=value)) +
+    ggplot(x, aes(kid, name, fill=value)) +
         (if (xo) scale_x_discrete(limits=.yo(z))) +
         (if (yo) scale_y_discrete(limits=.xo(z))) +
         scale_fill_gradient2(
@@ -55,50 +52,43 @@ df <- df |>
 }
 
 # joint
+cd <- colData(auc)[ids <- c("sub", "kid")]
+mu <- aggregateAcrossCells(auc, cd, statistics="mean")
+df <- data.frame(colData(mu)[ids], t(assay(mu)))
 fd <- df |>
-    # average across samples
-    group_by(sig, sub, kid) |>
-    summarise_at("value", mean) |>
-    # scale across clusters
-    group_by(sig, sub) |>
+    pivot_longer(all_of(rownames(mu))) |>
+    group_by(sub, name) |>
     mutate(value=.z(value)) |>
     ungroup()
-p0 <- lapply(sub, \(.) {
-    x <- select(fd[fd$sub == ., ], -sub)
-    .p(x, ., length(unique(x$kid))) + 
-        if (. != "epi") theme(axis.text.y=element_blank())
+p0 <- by(fd, fd$sub, \(.) {
+    .p(., i <- .$sub[1]) + 
+    if (i != "epi") theme(axis.text.y=element_blank())
 }) |> wrap_plots(nrow=1) + plot_layout(guides="collect")
 
-# split by sample
-fd <- df |>
-    # average by sample
-    group_by(sid, sig, sub, kid) |>
-    summarise_at("value", mean) |>
-    # scale across clusters
-    group_by(sid, sig) |>
-    mutate(value=.z(value)) |>
-    ungroup()
-ps <- lapply(sid, \(sid) { 
-    x <- select(fd[fd$sid == sid, ], -c(sid, sub))
-    .p(x, sid, length(unique(x$kid)), yo=TRUE)
-})
+# split
+cd <- colData(auc)[ids <- c("sub", "sid", "kid")]
+mu <- aggregateAcrossCells(auc, cd, statistics="mean")
+df <- data.frame(colData(mu)[ids], t(assay(mu)))
 
-# split by subset
+# by sample
 fd <- df |>
-    # average by sample
-    group_by(sid, sig, sub, kid) |>
-    summarise_at("value", mean) |>
-    # scale across clusters
-    group_by(sid, sig, sub) |>
+    pivot_longer(all_of(rownames(mu))) |>
+    group_by(sid, name) |>
+    mutate(value=.z(value)) |>
+    select(-sub) |>
+    ungroup()
+ps <- by(fd, fd$sid, \(.) .p(., .$sid[1]))
+
+# by subset
+fd <- df |>
+    pivot_longer(all_of(rownames(mu))) |>
+    group_by(sid, sub, name) |>
     mutate(value=.z(value)) |>
     ungroup()
-qs <- lapply(sid, \(sid) { 
-    lapply(sub, \(sub) {
-        x <- select(fd[fd$sid == sid & fd$sub == sub, ], -c(sid, sub))
-        .p(x, paste0(sid, ": ", sub), length(unique(x$kid))) +
-            if (sub != "epi") theme(axis.text.y=element_blank())
-    }) |> wrap_plots(nrow=1) + plot_layout(guides="collect")
-})
+qs <- by(fd, fd$sid, \(.) by(., .$sub, \(.) {
+    .p(., paste0(.$sid[1], ": ", i <- .$sub[1])) + 
+    if (i != "epi") theme(axis.text.y=element_blank())
+}) |> wrap_plots(nrow=1) + plot_layout(guides="collect"))
 
 # saving
 pdf(args[[3]], width=15/2.54, height=12/2.54, onefile=TRUE)

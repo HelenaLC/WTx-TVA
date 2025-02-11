@@ -25,4 +25,4 @@ sce <- runPCA(sce,
 
 # saving
 rowData(sce)$sel <- sel
-saveRDS(sce, args[[3]])
+base::saveRDS(sce, args[[3]])

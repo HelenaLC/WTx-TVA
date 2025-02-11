@@ -140,8 +140,8 @@ for x,y,z in zip(foo.x, foo.y, foo.z):
 # pat = re.compile(r'^((?!roi).)*$')
 # plt = [p for p in plt if pat.match(p)]
 
-# pat = re.compile(r'^((?!trj).)*$')
-# plt = [p for p in plt if pat.match(p)]
+pat = re.compile(r'^((?!trj).)*$')
+plt = [p for p in plt if pat.match(p)]
 
 # pat = re.compile(r'^((?!sig).)*$')
 # plt = [p for p in plt if pat.match(p)]
@@ -159,7 +159,7 @@ rule all:
 		expand([rep, trj], sid=SID, sub=["epi"]),
 		expand([pbs], sid=SID, sub=SUB),
 		expand(plt, sid=SID, sub=SUB),
-		expand([ctx], sid=SID), qlt
+		expand([ctx], sid=SID)
 
 # analysis =========================================
 

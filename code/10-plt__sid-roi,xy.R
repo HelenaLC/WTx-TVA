@@ -13,4 +13,4 @@ gg <- .plt_xy(sce, typ, wcs$sid, split=FALSE) +
 
 # saving
 df <- gg$data; dx <- diff(range(df$x)); dy <- diff(range(df$y))
-ggsave(args[[3]], gg, units="cm", width=2+dx/2, height=0.5+dy/2)
+ggsave(args[[2]], gg, units="cm", width=2+dx/2, height=0.5+dy/2)

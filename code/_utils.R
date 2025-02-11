@@ -691,8 +691,8 @@
         if (!is.numeric(df[[c]])) {
         # discrete coloring
         pal <- if (nlevels(df[[c]]) == 3) .pal_sub else .pal_kid
-        pal <- scale_fill_manual(NULL, na.translate=FALSE,
-            values=setNames(pal, levels(df[[c]])))
+        if (is.null(names(pal))) names(pal) <- levels(df[[c]])
+        pal <- scale_fill_manual(NULL, values=pal, na.translate=FALSE)
         thm <- list(pal, .thm_fig_d("void", "f"))
         } else thm <- NULL
     } else {

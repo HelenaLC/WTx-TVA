@@ -31,8 +31,8 @@ fd <- df |>
     summarise_at("auc", mean, na.rm=TRUE) |>
     group_by(set) |>
     mutate_at("auc", .z) |>
-    mutate(name=gsub("HALLMARK_", "", name)) |>
-    mutate(name=gsub("DESCARTES_FETAL_INTESTINE_", "", name))
+    mutate(set=gsub("HALLMARK_", "", set)) |>
+    mutate(set=gsub("DESCARTES_FETAL_INTESTINE_", "", set))
 
 # order according to hierarchical clustering
 mx <- pivot_wider(fd, names_from="set", values_from="auc")

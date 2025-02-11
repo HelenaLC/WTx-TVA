@@ -1,7 +1,4 @@
-# CosMx SMI
-
-#onstart:
-#	shell("Rscript meta/sig/0.R")
+# WTx-CosMx SMI on TVA/CRC
 
 import re
 import pandas as pd
@@ -132,25 +129,26 @@ foo = glob_wildcards("code/10-plt__all_sid__all_sid_all_sub-{x},{y},{z}.R")
 for x,y,z in zip(foo.x, foo.y, foo.z):
 	plt += expand(plt__all_sid__all_sid_all_sub, out1=x, out2=y, plt=z)
 
-# plt__roi__sid__sid = "plts/roi,{out1},{out2},{plt}.pdf"
-# foo = glob_wildcards("code/10-plt__roi__sid__sid-{x},{y},{z}.R")
-# for x,y,z in zip(foo.x, foo.y, foo.z):
-# 	plt += expand(plt__roi__sid__sid, out1=x, out2=y, plt=z)
-
 # pat = re.compile(r'^((?!roi).)*$')
 # plt = [p for p in plt if pat.match(p)]
-
-pat = re.compile(r'^((?!trj).)*$')
-plt = [p for p in plt if pat.match(p)]
 
 # pat = re.compile(r'^((?!sig).)*$')
 # plt = [p for p in plt if pat.match(p)]
 
+pat = re.compile(r'^.*trj.*$')
+qlt = [p for p in plt if pat.match(p)]
+plt += expand(qlt, sid=SID, sub="epi")
+pat = re.compile(r'^((?!trj.*{).)*$')
+plt = [p for p in plt if pat.match(p)]
+
+# visuals that require so many inputs, 
+# they don't fit with the above schema...
 qlt = []
 
 # transition crypts
-qlt_tcs__xy_lv2 = "qlts/tcs,xy,lv2.pdf"
-qlt += [qlt_tcs__xy_lv2]
+qlt_tcs__xy_lv1 = "plts/tcs,xy,lv1.pdf"
+qlt_tcs__xy_lv2 = "plts/tcs,xy,lv2.pdf"
+qlt += [qlt_tcs__xy_lv1, qlt_tcs__xy_lv2]
 
 rule all:
 	input:
@@ -159,7 +157,7 @@ rule all:
 		expand([rep, trj], sid=SID, sub=["epi"]),
 		expand([pbs], sid=SID, sub=SUB),
 		expand(plt, sid=SID, sub=SUB),
-		expand([ctx], sid=SID)
+		expand([ctx], sid=SID), qlt
 
 # analysis =========================================
 
@@ -576,6 +574,22 @@ def out_sid(out, typ="rds"): return(expand("outs/{out}-{sid}.{typ}",
 def out_sid_sub(out): return(expand("outs/{out}-{sid},{sub}.rds", out=out, sid=SID, sub=SUB))
 
 # transition crypts
+rule qlt_tcs__xy_lv1:
+	input:	"code/10-qlt_tcs-xy,lv1.R",
+			a = out_sid("fil"),
+			b = out_sid("roi"),
+			c = out_sid("pol", "parquet"),
+			d = out_sid("lv1")
+	log:	"logs/qlt_tcs__xy_lv1.Rout"
+	params:	lambda wc, input: ";".join(input.a),
+			lambda wc, input: ";".join(input.b),
+			lambda wc, input: ";".join(input.c),
+			lambda wc, input: ";".join(input.d)
+	output:	qlt_tcs__xy_lv1
+	shell: '''R CMD BATCH\
+	--no-restore --no-save "--args\
+	{params} {output}" {input[0]} {log}'''
+
 rule qlt_tcs__xy_lv2:
 	input:	"code/10-qlt_tcs-xy,lv2.R",
 			a = out_sid("fil"),
@@ -591,12 +605,3 @@ rule qlt_tcs__xy_lv2:
 	shell: '''R CMD BATCH\
 	--no-restore --no-save "--args\
 	{params} {output}" {input[0]} {log}'''
-
-# rule plt__roi__sid__sid:
-# 	priority: 8
-# 	input:	"code/10-plt__roi__sid__sid-{out1},{out2},{plt}.R", roi, x = a_sid, y = b_sid
-# 	log:	"logs/plt__roi__sid__sid-{out1},{out2},{plt}.Rout"
-# 	output:	plt__roi__sid__sid
-# 	shell: '''R CMD BATCH\
-# 	--no-restore --no-save "--args wcs={wildcards}\
-# 	{input[1]} {input[2]} {input[3]} {output}" {input[0]} {log}'''

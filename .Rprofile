@@ -1,5 +1,4 @@
-source("~/projects/cosmx/utils.R")
-data.table::setDTthreads(threads = 1)
+source("code/_utils.R")
 
 .get_wcs <- function(wcs) {
     wcs <- gsub("(,)(\\w+=)", ";\\2", wcs)

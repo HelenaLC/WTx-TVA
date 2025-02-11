@@ -1,5 +1,6 @@
 # dependencies
 suppressPackageStartupMessages({
+    library(Matrix)
     library(scater)
     library(reticulate)
     library(BiocParallel)
@@ -16,7 +17,12 @@ bp <- MulticoreParam(th)
 
 # loading
 sce <- readRDS(args[[1]])
-sce <- logNormCounts(sce, BPPARAM=bp)
+
+# normalize by area
+cpa <- normalizeCounts(sce,
+    size.factors=sce$Area.um2,
+    center.size.factors=FALSE)
+assay(sce, "cpa") <- cpa
 
 # wrangling
 xy <- grep("global_mm$", names(colData(sce)))
@@ -46,12 +52,12 @@ sr <- bplapply(is, BPPARAM=bp, \(.) {
     tryCatch(error=\(e) e, {
         # skip FOV when there are too few cells
         if (length(.) < 200) return(NULL) 
-        ad <- SCE2AnnData(sce[, .], X_name="logcounts")
+        ad <- SCE2AnnData(sce[, .], X_name="cpa")
         ct$tl$spatial_communication(ad,
             database_name="CellChatDB",
-            # average immune cell is 10x10um; here, we set
-            # a distance threshold of 10 cells (= 0.1mm)
-            dis_thr=0.1,  
+            # average cell is around 10x10um; here, we set
+            # a distance threshold of 2 cells (20um=.02mm)
+            dis_thr=0.02,  
             df_ligrec=db,
             heteromeric=TRUE,
             pathway_sum=TRUE,
@@ -74,6 +80,11 @@ r <- lapply(sr, \(.) .[[2]])
 s <- do.call(rbind, unname(s))
 r <- do.call(rbind, unname(r))
 res <- list(s=s[i, ], r=r[i, ])
+res <- lapply(res, \(.) {
+    mtx <- as(as.matrix(.), "dgCMatrix")
+    nms <- gsub("^(s|r)-", "", colnames(.))
+    `colnames<-`(mtx, nms)
+})
 
 # saving
 saveRDS(res, args[[2]])

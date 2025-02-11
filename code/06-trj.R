@@ -6,25 +6,22 @@ suppressPackageStartupMessages({
 })
 
 # setup
-set.seed(250201)
+set.seed(250209)
 
 # loading
 sce <- readRDS(args[[1]])
-roi <- readRDS(args[[2]])
+ist <- readRDS(args[[2]])
 
 # wrangling
-ref <- grepl("REF", roi$typ)
-ref <- colnames(roi)[ref]
-ids <- rep("-1", ncol(sce))
-names(ids) <- colnames(sce)
-ids[ref] <- "REF"; table(ids)
+kid <- (kid <- ist$clust)[match(colnames(sce), names(kid))]
+table(clu <- ifelse(grepl("REF_", kid), "one", "two"))
 
 # analysis
-sce <- slingshot(sce,
-    reducedDim="PCA", 
-    start.clus="REF",
-    clusterLabels=ids, 
-    approx_points=100)
+sce <- slingshot(sce, 
+    approx_points=100,
+    clusterLabels=clu, 
+    start.clus="one",
+    reducedDim="PCA") 
 
 # saving
-saveRDS(sce, args[[3]])
+base::saveRDS(sce, args[[3]])

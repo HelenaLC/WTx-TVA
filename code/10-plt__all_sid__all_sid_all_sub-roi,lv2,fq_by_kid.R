@@ -51,13 +51,14 @@ ps <- lapply(group_split(df, sub), \(fd) {
         scale_y_continuous(
             "proportion of cells", n.breaks=6, 
             labels=scales::label_percent()) +
-        scale_fill_manual(sub, values=.pal) +
+        scale_fill_manual(sub, values=.pal_kid) +
         coord_cartesian(expand=FALSE) +
         gd + theme_bw(6) + theme(
             plot.margin=margin(),
-            axis.text.x=element_blank(),
             axis.title.x=element_blank(),
-            axis.ticks.x=element_blank())
+            axis.ticks.x=element_blank()) +
+        if (sub != "str") theme(axis.text=element_blank()) else
+        theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
     p2 <- ggplot(distinct(fd, roi, .keep_all=TRUE), aes(roi)) + 
         geom_tile(key_glyph="point", col="white", aes(y=0, fill=typ)) + 
         scale_fill_manual(values=c("limegreen", "royalblue", "tomato")) +
@@ -88,4 +89,4 @@ gg <- wrap_plots(ps, ncol=1) +
         legend.key=element_blank(),
         panel.grid=element_blank(),
         legend.margin=margin())
-ggsave(args[[3]], gg, units="cm", width=8, height=10)
+ggsave(args[[3]], gg, units="cm", width=8, height=12)

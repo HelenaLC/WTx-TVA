@@ -2,14 +2,13 @@
 sce <- readRDS(args[[1]])
 
 # wrangling
-pal <- c("seagreen", "royalblue", "tomato")
 typ <- gsub(".*(REF|TVA|CRC).*", "\\1", sce$typ)
 typ <- factor(typ, c("REF", "TVA", "CRC"))
-names(typ) <- colnames(sce)
+typ <- setNames(typ, colnames(sce))
 
 # plotting
-gg <- .plt_xy(sce, typ, wcs$sid)[[1]] + 
-    scale_color_manual(values=pal) +
+gg <- .plt_xy(sce, typ, wcs$sid, split=FALSE) + 
+    scale_color_manual(values=.pal_roi) +
     theme(legend.position="none")
 
 # saving

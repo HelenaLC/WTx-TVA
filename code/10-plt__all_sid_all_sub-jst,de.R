@@ -14,7 +14,7 @@ ist <- lapply(args[[1]], readRDS)
 # wrangling
 sid <- gsub(".*-(.*),.*\\.rds", "\\1", basename(args[[1]]))
 sub <- gsub(".*-.*,(.*)\\.rds", "\\1", basename(args[[1]]))
-# 
+
 se <- mapply(
     ist=ist, sid=sid, sub=sub,
     SIMPLIFY=FALSE, \(ist, sid, sub) {

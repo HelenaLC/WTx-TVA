@@ -29,8 +29,8 @@ fd <- fd[fd$gene_symbol %in% rownames(sce), ]
 gs <- split(fd$gene_symbol, fd$gs_name)
 range(sapply(gs, length)); length(gs)
 
-# normalize by area
-mtx <- sweep(counts(sce), 2, sce$Area.um2, `/`)
+# log-library size normalization
+mtx <- normalizeCounts(sce, log=TRUE)
 
 # gene set scoring
 idx <- split(seq(ncol(sce)), sce$fov)

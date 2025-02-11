@@ -5,6 +5,8 @@ meta/
 data/ref/
 outs/raw-*
 **/*.gz
+**/*.txt
+**/*.csv
 **/*.rds
 **/*.tif
 **/*.pdf

@@ -16,4 +16,5 @@ outs/raw-*
 **/*.Rout
 **/*.pickle
 **/*.parquet
+.snakemake/
 !*/.gitkeep

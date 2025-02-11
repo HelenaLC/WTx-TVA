@@ -47,8 +47,8 @@ lv1 = "outs/lv1-{sid}.rds"
 
 sub = "outs/sub-{sid},{sub}.rds"
 rep = "outs/rep-{sid},{sub}.rds"
+trj = "outs/trj-{sid},{sub}.rds"
 add = "outs/add-{sub}"
-trj = "outs/trj-{sub}.rds"
 
 jst = "outs/jst-{sid},{sub}.rds"
 lv2 = "outs/lv2-{sid},{sub}.rds"
@@ -140,20 +140,26 @@ for x,y,z in zip(foo.x, foo.y, foo.z):
 # pat = re.compile(r'^((?!roi).)*$')
 # plt = [p for p in plt if pat.match(p)]
 
-pat = re.compile(r'^((?!trj).)*$')
-plt = [p for p in plt if pat.match(p)]
+# pat = re.compile(r'^((?!trj).)*$')
+# plt = [p for p in plt if pat.match(p)]
 
-pat = re.compile(r'^((?!sig).)*$')
-plt = [p for p in plt if pat.match(p)]
+# pat = re.compile(r'^((?!sig).)*$')
+# plt = [p for p in plt if pat.match(p)]
+
+qlt = []
+
+# transition crypts
+qlt_tcs__xy_lv2 = "qlts/tcs,xy,lv2.pdf"
+qlt += [qlt_tcs__xy_lv2]
 
 rule all:
 	input:
 		expand([raw, fil, pol, pro, roi, ccc, sig, ist, lv1], sid=SID),
 		expand([sub, jst, lv2], sid=sid, sub=SUB),
-		expand([rep, add, trj], sid=SID, sub="epi"),
+		expand([rep, trj], sid=SID, sub=["epi"]),
 		expand([pbs], sid=SID, sub=SUB),
 		expand(plt, sid=SID, sub=SUB),
-		expand([ctx], sid=SID)
+		expand([ctx], sid=SID), qlt
 
 # analysis =========================================
 
@@ -318,32 +324,43 @@ rule rep:
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''
 
-# intergation
-rule add:
-	wildcard_constraints: sub = "epi"
-	threads: 80
-	priority: 93
-	input:	"code/06-red.R",
-			x = expand("outs/rep-{sid},{{sub}}.rds", sid=SID)
-	params: lambda wc, input: ";".join(input.x)
-	output:	directory(add)
-	log:    "logs/add-{sub}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{params} {output} ths={threads}" {input[0]} {log}'''	
-
 # trajectory
 rule trj:
 	priority: 92
 	wildcard_constraints: sub = "epi"
-	input:	"code/07-trj.R", add,
-			x = expand("outs/jst-{sid},{{sub}}.rds", sid=SID)
-	params: lambda wc, input: ";".join(input.x)
+	input:	"code/06-trj.R", rep, jst
 	output:	trj
-	log:    "logs/trj-{sub}.Rout"
+	log:    "logs/trj-{sid},{sub}.Rout"
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {params} {output}" {input[0]} {log}'''	
+	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
+
+# # intergation
+# rule add:
+# 	wildcard_constraints: sub = "epi"
+# 	threads: 80
+# 	priority: 93
+# 	input:	"code/06-red.R",
+# 			x = expand("outs/rep-{sid},{{sub}}.rds", sid=SID)
+# 	params: lambda wc, input: ";".join(input.x)
+# 	output:	directory(add)
+# 	log:    "logs/add-{sub}.Rout"
+# 	shell: '''R CMD BATCH\\
+# 	--no-restore --no-save "--args wcs={wildcards}\
+# 	{params} {output} ths={threads}" {input[0]} {log}'''	
+
+# # trajectory
+# rule trj:
+# 	priority: 92
+# 	wildcard_constraints: sub = "epi"
+# 	input:	"code/07-trj.R", add,
+# 			x = expand("outs/jst-{sid},{{sub}}.rds", sid=SID)
+# 	params: lambda wc, input: ";".join(input.x)
+# 	output:	trj
+# 	log:    "logs/trj-{sub}.Rout"
+# 	shell: '''R CMD BATCH\\
+# 	--no-restore --no-save "--args wcs={wildcards}\
+# 	{input[1]} {params} {output}" {input[0]} {log}'''	
 
 # profiles	
 rule pbs:
@@ -549,6 +566,30 @@ rule plt__all_sid__all_sid_all_sub:
 	output:	plt__all_sid__all_sid_all_sub
 	shell: '''R CMD BATCH\
 	--no-restore --no-save "--args wcs={wildcards}\
+	{params} {output}" {input[0]} {log}'''
+
+# visuals that require so many inputs, 
+# they don't fit with the above schema...
+
+def out_sid(out, typ="rds"): return(expand("outs/{out}-{sid}.{typ}", 
+	out=out, sid=SID, typ="parquet" if out == "pol" else "rds"))
+def out_sid_sub(out): return(expand("outs/{out}-{sid},{sub}.rds", out=out, sid=SID, sub=SUB))
+
+# transition crypts
+rule qlt_tcs__xy_lv2:
+	input:	"code/10-qlt_tcs-xy,lv2.R",
+			a = out_sid("fil"),
+			b = out_sid("roi"),
+			c = out_sid("pol", "parquet"),
+			d = out_sid_sub("lv2")
+	log:	"logs/qlt_tcs__xy_lv2.Rout"
+	params:	lambda wc, input: ";".join(input.a),
+			lambda wc, input: ";".join(input.b),
+			lambda wc, input: ";".join(input.c),
+			lambda wc, input: ";".join(input.d)
+	output:	qlt_tcs__xy_lv2
+	shell: '''R CMD BATCH\
+	--no-restore --no-save "--args\
 	{params} {output}" {input[0]} {log}'''
 
 # rule plt__roi__sid__sid:

@@ -1,4 +1,5 @@
 # pal ----
+.pal_roi <- c(REF="seagreen", TVA="royalblue", CRC="tomato")
 .pal_sub <- c(imm="cyan", epi="gold", str="magenta")
 .pal_kid <- unname(pals::trubetskoy())
 .pal <- c(
@@ -395,7 +396,7 @@
 }
 
 # plot cluster composition by field of view
-.plt_fq <- \(z, x, y, id="", hc=TRUE, h=FALSE) {
+.plt_fq <- \(z, x, y, id="", by=NULL, hc=TRUE, h=FALSE, a=1) {
     library(ggplot2)
     library(SingleCellExperiment)
     # tabulate cell counts
@@ -404,6 +405,9 @@
     ns <- table(z[[x]], z[[y]])
     ys <- sort(unique(z[[y]]))
     df <- as.data.frame(ns)
+    i <- match(df[[1]], z[[x]])
+    j <- setdiff(names(z), c(x, y))
+    df <- cbind(df, z[i, j])
     # hierarchical clustering
     xo <- if (hc) {
         hc <- hclust(dist(prop.table(ns, 1)))
@@ -418,15 +422,17 @@
     }
     ggplot(df, aes(Var1, Freq, fill=Var2)) +
         geom_col(
-            position="fill", col="white", 
+            position="fill", col="white", alpha=a,
             linewidth=0.1, width=1, key_glyph="point") +
         scale_fill_manual(NULL, values=.pal_kid) +
         labs(x=x, y=NULL) +
         ggtitle(.lab(id, nrow(z))) +
         scale_x_discrete(limits=xo) +
         scale_y_continuous(n.breaks=2) +
-        .thm_fig_d("minimal", "f") + aes + 
-        theme(axis.ticks=element_blank()) 
+        .thm_fig_d("minimal", "f") + 
+        aes + theme(
+            axis.ticks=element_blank(),
+            panel.grid=element_line()) 
 }
 
 # gene x cluster heatmaps including look-up, joint & split markers
@@ -567,9 +573,10 @@
     library(ggrastr)
     library(SingleCellExperiment)
     # wrangling
+    cd <- if (is.data.frame(x)) x else colData(x)
     xy <- "Center(X|Y)_global_mm"
-    xy <- grep(xy, names(colData(x)))
-    names(colData(x))[xy] <- c("x", "y")
+    xy <- grep(xy, names(cd))
+    names(cd)[xy] <- c("x", "y")
     if (length(names(k))) {
         cs <- match(colnames(x), names(k))
         nk <- length(ks <- levels(k <- as.factor(k[cs])))
@@ -577,7 +584,7 @@
         pal <- setNames(pal[seq_len(nk)], ks)
     }
     # aesthetics
-    df <- data.frame(colData(x), k)
+    df <- data.frame(cd, k)
     dx <- diff(range(df$x))
     dy <- diff(range(df$y))
     pt <- if (is.null(s)) min(dx, dy)/100/4 else s
@@ -587,6 +594,7 @@
         p0 <- ggplot(fd, aes(x, y, col=k)) + .thm_xy_d(pt) +
             scale_color_manual(NULL, drop=FALSE, values=pal) +
             ggtitle(.lab(id, nrow(fd)))
+        if (!split) return(p0)
         ps <- if (split) lapply(c(ks, NA), \(k) {
             df$. <- if (is.na(k)) is.na(df$k) else grepl(sprintf("^%s$", k), df$k)
             ggplot(df[order(df$.), ], aes(x, y, col=.)) + 
@@ -597,7 +605,7 @@
         c(list(p0), ps)
     } else {
         ggplot(df, aes(x, y, col=k)) + .thm_xy_c(pt) +
-            scale_color_gradientn(colors=pals::jet()) +
+            scale_color_gradientn(NULL, colors=pals::jet()) +
             ggtitle(.lab(id, nrow(df)))
     }
 }
@@ -642,52 +650,50 @@
 # th = scalar numeric; threshold to use when 't == "z"'
 # qs = scalar or length-2 numeric; quantiles to use when 't == "q"'
 # hl = logical/character vector; cells to highlight (others are 'blacked out')
-.plt_ps <- \(df, sce=NULL, c="white", 
+.plt_ps <- \(df, sce=NULL, c="white", a=1,
     t=c("n", "z", "q"), th=2.5, qs=0.01, 
-    hl=NULL, lw=0.1, lc="black", id="") {
+    hl=NULL, lw=0.1, lc="darkgrey", id="") {
     library(dplyr)
     library(ggplot2)
     # filtering
-    df <- df |>
-        filter(cell %in% colnames(sce)) |>
+    cs <- pull(df, "cell", as_vector=TRUE)
+    cs <- which(cs %in% colnames(sce))
+    df <- df[cs, ] |>
         mutate(
             x=.px2mm(x_global_px), 
             y=.px2mm(y_global_px))
     i <- pull(df, "cell", as_vector=TRUE)
     i <- match(i, colnames(sce))
     j <- setdiff(names(colData(sce)), names(df))
-    df <- cbind(as.data.frame(df), colData(sce)[i, j])
+    cd <- colData(sce[, i])[j]
+    df <- cbind(as.data.frame(df), cd)
     if (c %in% rownames(sce)) {
         df[[c]] <- logcounts(sce)[c, i]
         # continuous coloring
         pal <- switch(match.arg(t), 
             n={ # no transformation
-                scale_fill_gradientn(colors=c("navy", "red", "gold", "ivory"))
+                scale_fill_gradientn(colors=pals::jet())
             },
             z={ # thresholded z-normalization
                 df[[c]] <- .z(df[[c]], th)
-                scale_fill_gradient2(low="blue", mid="ivory", high="red")
+                scale_fill_gradientn(
+                    colors=pals::coolwarm(),
+                    limits=c(-th, th), n.breaks=5)
             },
             q={ # lower/upper quantile scaling
                 df[[c]] <- .q(df[[c]], qs)
                 scale_fill_gradientn(
-                    limits=c(0, 1), breaks=c(0, 1),
-                    colors=c("navy", "red", "gold", "ivory"))
+                    colors=pals::jet(),
+                    limits=c(0, 1), n.breaks=5)
             })
-            thm <- list(pal, theme(            
-                legend.key.width=unit(1, "lines"),
-                legend.key.height=unit(0.25, "lines")))
+            thm <- list(pal, .thm_xy_c())
     } else if (c %in% names(df)) {
         if (!is.numeric(df[[c]])) {
         # discrete coloring
-        df[[c]] <- droplevels(factor(df[[c]]))
-        pal <- scale_fill_manual(
-            breaks=levels(df[[c]]),
-            values=.pal(levels(df[[c]])))
-        thm <- list(pal, 
-            theme(legend.key.size=unit(0.5, "lines")), 
-            guides(fill=guide_legend(override.aes=list(
-                size=3, stroke=0.2, shape=21))))
+        pal <- if (nlevels(df[[c]]) == 3) .pal_sub else .pal_kid
+        pal <- scale_fill_manual(NULL, na.translate=FALSE,
+            values=setNames(pal, levels(df[[c]])))
+        thm <- list(pal, .thm_fig_d("void", "f"))
         } else thm <- NULL
     } else {
         df[[c <- "foo"]] <- c
@@ -701,14 +707,9 @@
     }
     # plotting
     ggplot(df, aes(x, y, fill=.data[[c]], group=cell)) + 
-        geom_polygon(col=lc, linewidth=lw, key_glyph="point") +
+        geom_polygon(col=lc, alpha=a, linewidth=lw, key_glyph="point") +
         ggtitle(.lab(id, length(unique(df$cell)))) +
-        coord_equal(expand=FALSE) + 
-        .theme_black_void + 
-        thm + theme(
-            legend.position="bottom",
-            legend.title=element_blank(),
-            panel.background=element_rect(fill="black"))
+        coord_equal(expand=FALSE) + thm
 }
 
 # px to mm conversion
@@ -820,7 +821,7 @@ suppressPackageStartupMessages({
 }
 
 # theme for spatial plots
-.thm_xy <- \(s) list(
+.thm_xy <- \(s=0.1) list(
     ggrastr::geom_point_rast(shape=16, stroke=0, size=s, raster.dpi=600),
     scale_x_continuous(expand=expansion(0, 0.1)),
     scale_y_continuous(expand=expansion(0, 0.1)),
@@ -828,8 +829,8 @@ suppressPackageStartupMessages({
         plot.margin=margin(),
         plot.title=element_text(hjust=0.5),
         panel.background=element_rect(color="grey", fill=NA)))
-.thm_xy_d <- \(s) c(.thm_fig_d("void"), .thm_xy(s))
-.thm_xy_c <- \(s) c(.thm_fig_c("void"), .thm_xy(s))
+.thm_xy_d <- \(s=0.1) c(.thm_fig_d("void"), .thm_xy(s))
+.thm_xy_c <- \(s=0.1) c(.thm_fig_c("void"), .thm_xy(s))
 
 .theme_w <- theme(
     panel.grid=element_blank(),

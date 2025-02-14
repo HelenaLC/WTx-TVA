@@ -8,13 +8,6 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
-# # loading
-# args <- list(
-#     list.files("outs", "fil", full.names=TRUE),
-#     list.files("outs", "roi", full.names=TRUE),
-#     list.files("outs", "pol", full.names=TRUE),
-#     list.files("outs", "lv1", full.names=TRUE))
-
 # helper to get spatial coordinates
 .xy <- \(.) {
     xy <- "Center(X|Y)_global_mm"

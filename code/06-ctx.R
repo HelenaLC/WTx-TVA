@@ -49,7 +49,7 @@ df[is.na(df)] <- 0
 
 # clustering
 fd <- select(df, where(is.numeric))
-km <- kmeans(fd, centers=nk <- 20)$cluster
+km <- kmeans(fd, centers=nk <- 15)$cluster
 df$ctx <- factor(km, labels=paste0("N", seq_len(nk)))
 with(df, table(ctx, sid))
 

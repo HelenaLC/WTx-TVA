@@ -132,29 +132,32 @@ for x,y,z in zip(foo.x, foo.y, foo.z):
 # pat = re.compile(r'^((?!roi).)*$')
 # plt = [p for p in plt if pat.match(p)]
 
-# pat = re.compile(r'^((?!sig).)*$')
-# plt = [p for p in plt if pat.match(p)]
-
-pat = re.compile(r'^.*trj.*$')
-qlt = [p for p in plt if pat.match(p)]
-plt += expand(qlt, sid=SID, sub="epi")
-pat = re.compile(r'^((?!trj.*{).)*$')
+pat = re.compile(r'^((?!trj).)*$')
 plt = [p for p in plt if pat.match(p)]
+
+# pat = re.compile(r'^.*trj.*$')
+# qlt = [p for p in plt if pat.match(p)]
+# plt += expand(qlt, sid=SID, sub="epi")
+# pat = re.compile(r'^((?!trj.*{).)*$')
+# plt = [p for p in plt if pat.match(p)]
 
 # visuals that require so many inputs, 
 # they don't fit with the above schema...
 qlt = []
 
 # transition crypts
-qlt_tcs__xy_lv1 = "plts/tcs,xy,lv1.pdf"
-qlt_tcs__xy_lv2 = "plts/tcs,xy,lv2.pdf"
-qlt += [qlt_tcs__xy_lv1, qlt_tcs__xy_lv2]
+def qlt_tcs_lvx_r(n): return("code/10-qlt_tcs-lv"+str(n)+",{x}.R")
+def qlt_tcs_lvx_p(n): return("plts/tcs,lv"+str(n)+",{x}.pdf")
+for n in [1, 2]:
+    foo = glob_wildcards(qlt_tcs_lvx_r(n))
+    for x in foo.x: 
+        qlt += expand(qlt_tcs_lvx_p(n), x=x)
 
 rule all:
 	input:
 		expand([raw, fil, pol, pro, roi, ccc, sig, ist, lv1], sid=SID),
 		expand([sub, jst, lv2], sid=sid, sub=SUB),
-		expand([rep, trj], sid=SID, sub=["epi"]),
+		#expand([rep, trj], sid=SID, sub=["epi"]),
 		expand([pbs], sid=SID, sub=SUB),
 		expand(plt, sid=SID, sub=SUB),
 		expand([ctx], sid=SID), qlt
@@ -572,36 +575,22 @@ rule plt__all_sid__all_sid_all_sub:
 def out_sid(out, typ="rds"): return(expand("outs/{out}-{sid}.{typ}", 
 	out=out, sid=SID, typ="parquet" if out == "pol" else "rds"))
 def out_sid_sub(out): return(expand("outs/{out}-{sid},{sub}.rds", out=out, sid=SID, sub=SUB))
+def out_ist(n): if n == 1: return(out_sid("lv1")) else: return(out_sid_sub("lv2"))
 
 # transition crypts
-rule qlt_tcs__xy_lv1:
-	input:	"code/10-qlt_tcs-xy,lv1.R",
-			a = out_sid("fil"),
-			b = out_sid("roi"),
-			c = out_sid("pol", "parquet"),
-			d = out_sid("lv1")
-	log:	"logs/qlt_tcs__xy_lv1.Rout"
-	params:	lambda wc, input: ";".join(input.a),
-			lambda wc, input: ";".join(input.b),
-			lambda wc, input: ";".join(input.c),
-			lambda wc, input: ";".join(input.d)
-	output:	qlt_tcs__xy_lv1
-	shell: '''R CMD BATCH\
-	--no-restore --no-save "--args\
-	{params} {output}" {input[0]} {log}'''
-
-rule qlt_tcs__xy_lv2:
-	input:	"code/10-qlt_tcs-xy,lv2.R",
-			a = out_sid("fil"),
-			b = out_sid("roi"),
-			c = out_sid("pol", "parquet"),
-			d = out_sid_sub("lv2")
-	log:	"logs/qlt_tcs__xy_lv2.Rout"
-	params:	lambda wc, input: ";".join(input.a),
-			lambda wc, input: ";".join(input.b),
-			lambda wc, input: ";".join(input.c),
-			lambda wc, input: ";".join(input.d)
-	output:	qlt_tcs__xy_lv2
-	shell: '''R CMD BATCH\
-	--no-restore --no-save "--args\
-	{params} {output}" {input[0]} {log}'''
+for n in [1, 2]:
+    rule:
+        input:	qlt_tcs_lvx_r(n),
+                a = out_sid("fil"),
+                b = out_sid("roi"),
+                c = out_sid("pol", "parquet"),
+                d = out_ist(n)
+        log:	"logs/qlt_tcs-lv"+str(n)+",{x}.Rout"
+        params:	lambda wc, input: ";".join(input.a),
+                lambda wc, input: ";".join(input.b),
+                lambda wc, input: ";".join(input.c),
+                lambda wc, input: ";".join(input.d)
+        output:	qlt_tcs_lvx_p(n)
+        shell: '''R CMD BATCH\
+        --no-restore --no-save "--args\
+        {params} {output}" {input[0]} {log}'''

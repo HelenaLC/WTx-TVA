@@ -18,9 +18,10 @@ df <- do.call(rbind, dfs); df$kid <- NULL
 df <- dplyr::left_join(df, fd, by=c("sid", "cid"))
 
 # plotting
-gg <- by(df, df$sub, \(.) 
-    .plt_fq(., "ctx", "kid", .$sub[1], TRUE, TRUE)) |>
-    wrap_plots(nrow=1) & theme(axis.title.y=element_blank())
+ps <- by(df, df$sub, \(.) .plt_fq(., "ctx", "kid", .$sub[1], hc=TRUE, h=TRUE))
+xo <- ps[[1]]$scales$scales[[2]]$limits
+ps <- lapply(ps, `+`, scale_x_discrete(limits=xo))
+gg <- wrap_plots(ps, nrow=1) & theme(axis.title.y=element_blank())
 
 # saving
 ggsave(args[[3]], gg, units="cm", width=15, height=5)

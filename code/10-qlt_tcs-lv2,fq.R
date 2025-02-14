@@ -8,13 +8,6 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
-# # loading
-# args <- list(
-#     list.files("outs", "fil", full.names=TRUE),
-#     list.files("outs", "roi", full.names=TRUE),
-#     list.files("outs", "pol", full.names=TRUE),
-#     list.files("outs", "lv2", full.names=TRUE))
-
 # helper to get spatial coordinates
 .xy <- \(.) {
     xy <- "Center(X|Y)_global_mm"
@@ -31,13 +24,14 @@ ks <- lapply(kid, \(.) sort(unique(unlist(.))))
 
 sub <- names(kid); sid <- names(kid[[1]])
 args[1:3] <- lapply(args[1:3], `names<-`, sid)
-ps <- lapply(sid, \(sid) {
+df <- lapply(sid, \(sid) {
     # loading
     sce <- readRDS(args[[1]][sid]); assays(sce) <- list()
     roi <- readRDS(args[[2]][sid]); assays(roi) <- list()
     pol <- read_parquet(args[[3]][sid], as_data_frame=FALSE)
-    # get regions
+    # get regions, except lymphatic invasions
     ids <- sort(setdiff(unique(roi$roi), NA))
+    ids <- grep("LI$", ids, invert=TRUE, value=TRUE)
     lapply(ids, \(id) {
         roj <- roi[, grep(id, roi$roi)] # subset region
         ch <- concaveman(as.matrix(.xy(roj))) # concave hull
@@ -45,30 +39,32 @@ ps <- lapply(sid, \(sid) {
         # subset cells
         xy <- .xy(sce); yx <- st_coordinates(hc)
         cs <- point.in.polygon(xy[, 1], xy[, 2], yx[, 1], yx[, 2])
-        tmp <- sce[, colnames(sce)[cs != 0]]
-        # plotting
+        cs <- colnames(sce)[cs != 0]
         lapply(sub, \(sub) {
+            # get clusters
             kid <- kid[[sub]][[sid]]
-            idx <- match(colnames(tmp), names(kid))
-            tmp$jst <- factor(kid[idx], ks[[sub]])
-            .plt_ps(pol, tmp, "jst", id=id, lw=0.05, a=2/3) +
-                ggtitle(bquote(bold(.(id))~"("*.(sub)*")")) +
-                geom_polygon(fill=NA, col="black", linewidth=0.2,
-                    aes(V1, V2), data.frame(ch), inherit.aes=FALSE)
-        })
-    }) |> Reduce(f=base::c)
-}) |> Reduce(f=base::c)
+            kid <- kid[match(cs, names(kid))]
+            data.frame(sid, roi=id, sub, kid)
+        }) |> do.call(what=rbind)
+    }) |> do.call(what=rbind)
+}) |> do.call(what=rbind)
+
+# plotting
+ps <- by(df, df$sub, \(fd) {
+    id <- fd$sub[1]
+    nc <- sum(!is.na(fd$kid))
+    .plt_fq(fd, "roi", "kid") +
+    ggtitle(.lab(id, nc))
+})
+xo <- ps[[1]]$scales$scales[[2]]$limits
+ps[-1] <- lapply(ps[-1], `+`, scale_x_discrete(limits=xo))
+gg <- wrap_plots(ps, ncol=1) +
+    plot_layout(guides="collect") &
+    theme(
+        axis.title=element_blank(),
+        legend.justification="left",
+        axis.text.y=element_blank(),
+        axis.text.x=element_text(size=4))
 
 # saving
-tf <- replicate(length(ps), tempfile(fileext=".pdf"), FALSE)
-for (. in seq_along(ps)) {
-    df <- (p <- ps[[.]])$data
-    p$guides$guides$fill$params$override.aes$size <- 1
-    dx <- diff(range(df$x))*10
-    dy <- diff(range(df$y))*10
-    pdf(tf[[.]], 
-        width=(5+dx)/2.54, 
-        height=(0.5+dy)/2.54)
-    print(p); dev.off()
-}
-qpdf::pdf_combine(unlist(tf), output=args[[5]])
+ggsave(args[[5]], gg, units="cm", width=10, height=12)

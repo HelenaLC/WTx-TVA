@@ -6,7 +6,7 @@ suppressPackageStartupMessages({
 })
 
 # setup
-set.seed(250209)
+set.seed(250214)
 
 # loading
 sce <- readRDS(args[[1]])
@@ -14,7 +14,7 @@ ist <- readRDS(args[[2]])
 
 # wrangling
 kid <- (kid <- ist$clust)[match(colnames(sce), names(kid))]
-table(clu <- ifelse(grepl("REF_", kid), "one", "two"))
+table(clu <- ifelse(grepl("REF_enter", kid), "one", "two"))
 
 # analysis
 sce <- slingshot(sce, 

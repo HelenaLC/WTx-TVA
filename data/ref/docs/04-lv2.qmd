@@ -1,0 +1,196 @@
+## high-res.
+
+### setup
+
+```{r load-libs, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(scran)
+library(scater)
+library(ggplot2)
+library(tidytext)
+library(patchwork)
+library(BiocParallel)
+bp <- MulticoreParam(10)
+source("utils.R")
+set.seed(241127)
+```
+
+### loading
+
+```{r load-data}
+rds <- list.files("../outs", pat <- "^sub-(.*)\\.rds", full.names=TRUE)
+names(sub) <- sub <- gsub(pat, "\\1", basename(rds))
+lys <- setNames(lapply(rds, readRDS), sub)
+sapply(lys, ncol)
+```
+
+## labelling
+
+```{r include=FALSE}
+# temporarily assign to most dominant lv1 subpopulation
+lab <- lapply(sub, \(.) {
+    obj <- lys[[.]]
+    tbl <- table(obj$kid, obj$lv1)
+    new <- colnames(tbl)[apply(tbl, 1, which.max)]
+    setNames(make.unique(new), rownames(tbl))
+})
+```
+
+```{r lab}
+imm <- c(
+    b="Bn", j="Bm", 
+    c="mast", u="neutro", 
+    e="PC_IgA1", n="PC_IgA1", 
+    i="PC_IgA2", o="PC_IgA2", 
+    r="PC_IgG", s="PC_IgG", 
+    p="PC_IgM", t="PC_IgM",
+    f="macro_TR", h="macro_TR", 
+    a="Th", d="Th", l="Tc", q="Tp",
+    k="cDC1", m="cDC1", g="cDC2_CCR7")
+setdiff(unique(lys$imm$kid), names(imm))
+str <- c(
+    b="LEC", h="BEC", k="BEC", 
+    c="SMC", d="SMC", e="SMC",
+    a="fib_ADAMDEC1", i="fib_TLS", 
+    f="fib", m="fib", n="fib", o="fib",
+    g="CAF_CXCL14", j="CAF_L1CAM", 
+    l="CAF_COL4", p="CAF_CTHRC1", q="IAF_MMP")
+setdiff(unique(lys$str$kid), names(str))
+epi <- c(
+    a="epi.REF_goblet",
+    e="epi.REF_entero",
+    f="epi.REF_EE",
+    g="epi.TVA/CRC_paneth-like",
+    b="epi.TVA_stem",
+    o="epi.TVA_stem_LGR5h",
+    d="epi.TVA_stem_LGR5l",
+    n="epi.TVA_stem_LGR5l_REG",
+    c="epi.TVA1",
+    h="epi.TVA2",
+    i="epi.TVA3",
+    k="epi.TVA4",
+    p="epi.CRC_stem",
+    q="epi.CRC_stress",
+    m="epi.REF/CRC_goblet-progen",
+    j="epi.CRC", l="epi.CRC", r="epi.CRC")
+setdiff(unique(lys$epi$kid), names(epi))
+
+lab <- list(epi=epi, imm=imm, str=str)
+for (. in sub) {
+    idx <- match(lys[[.]]$kid, names(lab[[.]]))
+    lys[[.]]$lv2 <- factor(lab[[.]][idx], sort(unique(lab[[.]])))
+}
+# fqs <- lapply(lys, \(.) prop.table(table(.$pid, .$lv2)))
+# lapply(fqs, \(.) round(100*prop.table(., 1)))
+# lapply(lys, \(.) round(100*prop.table(., 2)))
+lapply(lys, \(.) table(.$lv2))
+sapply(lys, \(.) nlevels(.$lv2))
+```
+
+## plotting
+
+### compositions
+
+::: {.panel-tabset}
+
+```{r plt-fqs, results="asis", fig.width=4, fig.height=2}
+for (. in names(lys)) {
+    p <- .plt_fq(lys[[.]], x="lv2", y="pid", id=., pal=.pal)
+    cat("#### ", ., "\n"); print(p); cat("\n\n")
+}
+```
+
+:::
+
+### regression
+
+::: {.panel-tabset}
+
+```{r plt-pcr, results="asis", fig.width=6, fig.height=3}
+ids <- c("sum", "run", "pid", "kid", "lv2")
+pal <- c("magenta", "gold", "cyan", "blue", "green")
+pcr <- lapply(lys, .pcr, ids)
+for (. in sub) {
+    p <- .plt_pcr(pcr[[.]]) + scale_color_manual(values=pal)
+    cat("#### ", ., "\n"); print(p); cat("\n\n")
+}
+```
+
+:::
+
+### reduction
+
+::: {.panel-tabset}
+
+```{r plt-map, results="asis", fig.width=15, fig.height=5}
+ids <- c("run", "pid", "lv2")
+for (. in sub) {
+    p <- .plt_dr(lys[[.]], ids) & ggtitle(.lab(., ncol(lys[[.]])))
+    cat("#### ", ., "\n"); print(p); cat("\n\n")
+}
+```
+
+:::
+
+## profiles
+
+### selection
+
+```{r mgs}
+mgs <- lapply(lys, \(sub) findMarkers(
+    sub, groups=sub$lv2, block=sub$pid,
+    add.summary=TRUE, BPPARAM=bp))
+```
+
+```{r sel}
+sel <- lapply(sub, \(.) {
+    ns <- sapply(mgs[[.]], \(df) {
+        gs <- rownames(lys[[.]])
+        top <- rownames(df)[df$Top <= 200]
+        setNames(gs %in% top, gs)
+    }) |> rowSums()
+    names(which(ns > 1))
+})
+sel <- lapply(sel, \(.) unique(unlist(.)))
+sapply(sel, length)
+```
+
+```{r fig.width=4, fig.height=2.5}
+UpSetR::upset(UpSetR::fromList(sel))
+```
+
+### aggregation
+
+```{r pbs}
+pbs <- lapply(lys, \(sce) {
+    ids <- colData(sce)[c("pid", kid <- "lv2")]
+    pbs <- aggregateAcrossCells(sce, ids, BPPARAM=bp)
+    sizeFactors(pbs) <- NULL
+    pbs <- logNormCounts(pbs, log=FALSE)
+    aggregateAcrossCells(pbs, pbs[[kid]], BPPARAM=bp,
+        statistics="mean", use.assay.type="normcounts")
+})
+```
+
+## appendix
+
+### saving
+
+```{r save-data}
+for (. in sub)
+    saveRDS(
+        assay(pbs[[.]])[sel[[.]], ],
+        sprintf("../outs/pbs-lv2,%s.rds", .))
+```
+
+::: {.callout-note icon=false, collapse=true}
+
+### session
+
+```{r session-info}
+#| code-fold: false
+sessionInfo()
+```
+
+:::

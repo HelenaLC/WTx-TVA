@@ -1,0 +1,252 @@
+# comparison
+
+## preamble
+
+### dependencies
+
+```{r load-libs}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggrastr)
+library(tidytext)
+library(patchwork)
+library(BiocParallel)
+library(SingleCellExperiment)
+bp <- MulticoreParam(10)
+dir <- "~/projects/cosmx-wtx"
+source(file.path(dir, "code/_utils.R"))
+```
+
+### loading
+
+#### CosMx SMI
+
+```{r load-img}
+pat <- "^fil-(.*)\\.rds"
+out <- file.path(dir, "outs")
+sce <- list.files(out, pat, full.names=TRUE)
+ist <- list.files(out, "^lv1-", full.names=TRUE)
+ids <- gsub(pat, "\\1", basename(sce))
+names(ids) <- names(sce) <- names(ist) <- ids
+img <- lapply(ids, \(sid) {
+    sce <- readRDS(sce[[sid]]); ist <- readRDS(ist[[sid]])
+    assays(sce) <- altExps(sce) <- metadata(sce) <- list()
+    # raw <- file.path(img, paste0("raw-", sid), "assays.h5")
+    # sce@assays@data$counts@seed@seed@filepath <- path.expand(raw)
+    idx <- match(colnames(sce), names(kid <- ist$clust))
+    sce$kid <- kid[idx]; sce$sid <- sid; return(sce)
+})
+gs <- Reduce(intersect, lapply(img, rownames))
+img <- do.call(cbind, lapply(img, \(.) .[gs, ]))
+(n <- table(img$kid, img$sid))
+rowSums(n); colSums(n)
+```
+
+#### snPATHO-seq
+
+```{r load-seq}
+seq <- readRDS("../outs/sce-lv1.rds")
+assays(seq) <- list()
+pat <- list(
+    epi="epi",
+    str="fib|EC|SMC",
+    imm="BC|PC|TC|mye|mast")
+idx <- lapply(pat, grep, seq$lv1)
+seq$kid <- NA
+for (. in names(idx)) 
+    seq$kid[idx[[.]]] <- .
+md <- read.delim(file.path(dir, "meta", "metadata.txt"))
+md <- mutate(md, sid=paste(sid), sid=case_when(
+    grepl("^23", sid) ~ "230",
+    grepl("^24", sid) ~ "240",
+    TRUE ~ sid))
+seq$sid <- md$sid[match(seq$pid, md$pid)]
+(n <- table(seq$kid, seq$sid))
+rowSums(n); colSums(n)
+```
+
+## analysis
+
+```{r aes}
+thm <- list(theme(
+    legend.key=element_blank(),
+    plot.background=element_blank(),
+    panel.grid.minor=element_blank(),
+    strip.text=element_text(face="bold")))
+pal <- c("gold", "cyan", "magenta")
+seq$typ <- "snPATHO-seq"
+img$typ <- "CosMx SMI"
+```
+
+```{r df}
+df <- mutate(data.frame(colData(seq)),
+    det=detected, cid=colnames(seq))
+fd <- mutate(data.frame(colData(img)),
+    sum=nCount_RNA, det=nFeature_RNA, 
+    cid=paste(img$sid, colnames(img), sep="."))
+cd <- intersect(names(df), names(fd))
+df <- mutate(filter(rbind(df[cd], fd[cd]), !is.na(kid)), xid=case_when(
+    grepl("^23", sid) ~ "230", grepl("^24", sid) ~ "240", TRUE ~ sid)) 
+rownames(df) <- NULL; cat(format(nrow(df), big.mark=","))
+```
+
+### counts
+
+```{r ns}
+# snPATHO-seq
+raw <- readRDS("../outs/sce-raw.rds")
+ns_seq <- data.frame(colData(raw)) |>
+    mutate(fil=colnames(raw) %in% colnames(seq)) |>
+    mutate(sid=paste(md$sid[match(raw$pid, md$pid)])) |>
+    group_by(sid, fil) |> 
+    tally() |> 
+    mutate(p=n/sum(n))
+# CosMx SMI
+raw <- lapply(ids, \(sid) {
+    cd <- sprintf("raw-%s/se.rds", sid)
+    cd <- readRDS(file.path(out, cd))
+    cid <- paste(cd$sid, colnames(cd), sep=".")
+    data.frame(sid, cid)
+}) |> do.call(what=rbind)
+ns_img <- data.frame(raw) |>
+    mutate(fil=cid %in% df$cid) |>
+    group_by(sid, fil) |> 
+    tally() |> 
+    mutate(p=n/sum(n))
+ns <- list(
+    "snPATHO-seq"=ns_seq, 
+    "CosMx SMI"=ns_img) |>
+    bind_rows(.id="typ") |>
+    mutate(fil=factor(fil, c(TRUE, FALSE), c("kept", "removed")))
+```
+
+```{r plt-nps}
+gg <- list(
+    scale_color_manual(NULL, values=c("blue", "red")),
+    scale_fill_manual(NULL, values=c("royalblue", "tomato")),
+    facet_grid(rows="typ", scales="free_y", space="free"),
+    guides(fill=guide_legend(override.aes=list(alpha=1, shape=21, stroke=0, size=2))),
+    geom_bar(alpha=1/3, width=0.75, stat="identity", position="dodge", key_glyph="point"),
+    scale_y_discrete(limits=\(.) rev(.)),
+    theme_bw(6), thm, theme(
+        plot.margin=margin(),
+        legend.position="top",
+        legend.margin=margin(),
+        legend.key=element_blank(),
+        panel.grid=element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        plot.background=element_blank(),
+        strip.background=element_blank(),
+        legend.key.size=unit(0, "lines")))
+
+mu <- ns |>
+    group_by(typ, fil) |>
+    summarise_at("p", mean) |>
+    mutate(l=round(100*p, 2))
+ggplot(ns, aes(p, sid, fill=fil)) + gg +
+    scale_x_continuous("proportion of cells", expand=c(0, 0), 
+        limits=c(0, 1), n.breaks=6, labels=scales::percent) +
+    geom_vline(aes(xintercept=p, col=fil), mu, 
+        lty=2, linewidth=0.2, show.legend=FALSE) +
+    geom_label(
+        data=mu, y=Inf, vjust=1, size=2, show.legend=FALSE, 
+        fill=NA, label.size=0, label.padding=unit(0.1, "lines"),
+        aes(col=fil, hjust=ifelse(fil == "removed", 0, 1), label=l))
+ggsave("../plts/vs-ps.pdf", unit="cm", width=5, height=5)
+
+ms <- ns |>
+    mutate(m=ifelse(typ == "CosMx SMI", n/20, n)) |>
+    mutate(typ=ifelse(typ == "CosMx SMI", "CosMx SMI (1:20)", "snPATHO-seq"))
+mu <- ms |>
+    group_by(typ, fil) |>
+    summarise(across(c(n, m), mean)) |>
+    mutate(l=format(round(n), big.mark=","))
+ggplot(ms, aes(m, sid, fill=fil)) + gg +
+    geom_vline(aes(xintercept=m, col=fil), mu, 
+        lty=2, linewidth=0.2, show.legend=FALSE) +
+    scale_x_continuous("number of cells", expand=c(0, 0), 
+        limits=c(0, 4e4), n.breaks=4) +
+    geom_label(aes(col=fil, label=l), mu,
+        y=Inf, hjust=0, vjust=1, size=2, show.legend=FALSE, 
+        fill=NA, label.size=0, label.padding=unit(0.1, "lines"))
+ggsave("../plts/vs-ns.pdf", unit="cm", width=5, height=5)
+```
+
+### quality
+
+```{r qc, fig.width=12, fig.height=6}
+fd <- df |>
+    pivot_longer(c(sum, det)) |>
+    mutate(name=factor(
+        name, c("sum", "det"), 
+        xs <- c("counts", "features")))
+mu <- fd |>
+    group_by(typ, xid, kid, name) |>
+    summarise_at("value", median) |>
+    mutate(l=format(round(value), big.mark=","))
+ggplot(fd, aes(value, kid, fill=typ, col=kid)) + 
+    geom_boxplot(linewidth=0.2, outliers=FALSE, key_glyph="point") +
+    geom_text(aes(x=10^4.9, label=l), mu, 
+        position=position_dodge(width=0.75), col="black",
+        hjust=1, size=1.5, show.legend=FALSE) +
+    guides(
+        col=guide_legend(override.aes=list(shape=21, stroke=.4, size=2)),
+        fill=guide_legend(override.aes=list(shape=21, stroke=0, size=2, col=NA))) +
+    scale_x_log10(limits=c(10, 1e5), breaks=10^seq(2, 4), 
+        labels=scales::label_log(digits=2), expand=c(0, 0)) + 
+    scale_fill_manual(NULL, values=c("grey20", "grey80")) +
+    scale_color_manual(NULL, values=pal) +
+    facet_grid(xid~name, switch="y") +
+    theme_bw(6) + thm + theme(
+        legend.margin=margin(),
+        legend.position="bottom",
+        axis.title=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        strip.background=element_blank(),
+        legend.key.size=unit(0, "lines"))
+ggsave("../plts/vs-qc.pdf", units="cm", width=9.8, height=10.1)
+```
+
+### composition
+
+```{r fq, fig.width=6, fig.height=3}
+fd <- tally(group_by(df, typ, xid, kid))
+ggplot(fd, aes(typ, n, fill=kid)) + 
+    geom_col(alpha=2/3, width=1, linewidth=0.1, col="black", position="fill", key_glyph="point") +
+    scale_y_continuous("proportion of cells", n.breaks=6, labels=scales::percent_format()) +
+    guides(fill=guide_legend(override.aes=list(shape=21, stroke=0, col=NA, size=2))) +
+    labs(x=paste(sort(unique(fd$typ)), collapse=" vs. ")) +
+    scale_fill_manual(NULL, values=pal) +
+    coord_equal(10, expand=FALSE) +
+    facet_wrap(~xid, nrow=1) +
+    theme_bw(6) + thm + theme(
+        legend.position="none",
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.background=element_blank(),
+        strip.background=element_blank())
+ggsave("../plts/vs-fq.pdf", units="cm", width=5, height=3)
+```
+
+## appendix
+
+### saving
+
+```{r eval=FALSE, save-data}
+
+```
+
+::: {.callout-note icon=false, collapse=true}
+
+### session
+
+```{r session-info}
+#| code-fold: false
+sessionInfo()
+```
+
+:::

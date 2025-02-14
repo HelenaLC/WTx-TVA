@@ -1,0 +1,125 @@
+## preamble
+
+### setup
+
+```{r load-libs, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(irlba)
+library(scran)
+library(scater)
+library(igraph)
+library(harmony)
+library(ggplot2)
+library(tidytext)
+library(scDblFinder)
+library(BiocParallel)
+bp <- MulticoreParam(10)
+set.seed(241124)
+```
+
+### loading
+
+```{r load-data}
+(sce <- readRDS("../outs/sce-fil.rds"))
+```
+
+## selection
+
+```{r sel}
+tbl <- modelGeneVar(sce, block=sce$pid, BPPARAM=bp)
+tbl <- tbl[-grep("^H[0-9]|^RP(L|S)|^MT-", rownames(tbl)), ]
+sel <- lapply(tbl$per.block, getTopHVGs, n=2e3)
+sel <- sapply(sel, \(.) rownames(sce) %in% .)
+length(sel <- rownames(sce)[rowSums(sel) > 1])
+```
+
+## integration
+
+```{r int}
+reducedDim(sce, "PCA") <- RunHarmony(
+    meta_data=sce$run, verbose=FALSE,
+    prcomp_irlba(t(logcounts(sce[sel, ])), 30)$x)
+sce <- runUMAP(sce, dimred="PCA", BPPARAM=bp)
+```
+
+## clustering
+
+```{r clu}
+g <- buildSNNGraph(sce, use.dimred="PCA", type="jaccard", k=30, BPPARAM=bp)
+k <- cluster_leiden(g, objective_function="modularity", resolution=1)
+table(sce$kid <- factor(k <- k$membership, labels=letters[seq_along(unique(k))]))
+```
+
+## doublets
+
+```{r dbl-sco, message=FALSE, warning=FALSE}
+sce <- scDblFinder(sce, sce$kid, sce$pid, BPPARAM=bp)
+```
+
+```{r plt-dbl-sco, fig.width=6, fig.height=3}
+value <- metadata(sce)$scDblFinder.threshold
+th <- data.frame(pid=names(value), value)
+fd <- summarise(
+    group_by(df <- data.frame(colData(sce)), pid), 
+    p=100*mean(scDblFinder.score > th[pid, "value"]))
+ggplot(df, aes(scDblFinder.score, after_stat(ncount))) +
+    facet_wrap(~pid, nrow=2) + 
+    geom_histogram(bins=100, fill="black") + 
+    geom_vline(aes(xintercept=value), th, lty=2, col="royalblue") +
+    geom_text(
+        data=fd, col="orange", hjust=1, vjust=1,
+        aes(1, 1, label=paste0(round(p), "%"))) +
+    geom_text(
+        data=th, hjust=-0.1, col="royalblue",
+        aes(value, 0.5, label=round(value, 2))) +
+    scale_x_continuous("dbl. score", n.breaks=6) +
+    scale_y_continuous("norm. count", n.breaks=6) +
+    theme_bw() + theme(panel.grid.minor=element_blank()) 
+```
+
+```{r plt-dbl-kid, fig.width=8, fig.height=3}
+fd <- df[df$scDblFinder.class == "singlet", ]
+fd <- bind_rows(raw=df, fil=fd, .id="foo")
+ggplot(fd, aes(
+    y=scDblFinder.score, fill=foo, 
+    reorder(kid, scDblFinder.score, median))) +
+    scale_y_continuous("norm. count", n.breaks=6) +
+    scale_fill_manual(NULL, values=c("royalblue", "orange")) +
+    geom_boxplot(linewidth=0.2, outlier.stroke=0, key_glyph="point") +
+    guides(fill=guide_legend(override.aes=list(shape=21, stroke=0, size=3))) +
+    labs(x="cluster") + theme_bw() + theme(
+        legend.position="top",
+        legend.margin=margin(),
+        panel.grid.minor=element_blank(),
+        legend.key.size=unit(0.5, "lines"))
+```
+
+```{r dbl-fil}
+dbl <- 
+    sce$kid == "x" |
+    sce$scDblFinder.class == "doublet"
+sce$kid[dbl] <- NA
+ns <- table(sce$pid, dbl)
+sce$kid <- droplevels(sce$kid)
+cbind(ns, `%`=round(100*ns[, 2]/rowSums(ns), 2))
+```
+
+## appendix
+
+### saving
+
+```{r save-data}
+saveRDS(sce, "../outs/sce-dbl.rds")
+```
+
+::: {.callout-note icon=false, collapse=true}
+
+### session
+
+```{r session-info}
+#| code-fold: false
+sessionInfo()
+```
+
+:::

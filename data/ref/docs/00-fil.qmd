@@ -1,0 +1,258 @@
+## preamble
+
+### setup
+
+```{r load-libs, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(irlba)
+library(scran)
+library(scater)
+library(igraph)
+library(decontX)
+library(harmony)
+library(ggplot2)
+library(patchwork)
+library(DropletUtils)
+library(BiocParallel)
+bp <- MulticoreParam(15)
+set.seed(241124)
+```
+
+### loading
+
+```{r load-data}
+raw <- list.files("../data/raw", full.names=TRUE)
+fil <- list.files("../data/fil", full.names=TRUE)
+names(raw) <- basename(raw)
+names(fil) <- basename(fil)
+bkg <- read10xCounts(raw, BPPARAM=bp)
+sce <- read10xCounts(fil, BPPARAM=bp)
+```
+
+### wrangling
+
+```{r prep-data}
+fun <- \(sce) {
+    md <- read.delim("../data/metadata.txt")
+    bcs <- paste(sce$Sample, sce$Barcode, sep=".")
+    run <- factor(md$run[match(sce$Sample, md$pid)])
+    colData(sce) <- DataFrame(pid=sce$Sample, run, row.names=bcs)
+    rownames(sce) <- make.unique((rd <- rowData(sce))$Symbol)
+    rowData(sce) <- DataFrame(ensembl_id=rd$ID, gene_symbol=rd$Symbol)
+    metadata(sce) <- list()
+    return(sce)
+}
+bkg <- fun(bkg)
+(sce <- fun(sce))
+table(sce$pid, sce$run)
+# exclude lymph node section
+sce <- sce[, sce$pid != "24H06944_A16"]
+# add sample identifiers
+md <- read.delim("../../../meta/metadata.txt")
+md <- mutate(md, 
+    sid=paste(sid), 
+    sid=case_when(
+        grepl("^23", sid) ~ "230",
+        grepl("^24", sid) ~ "240",
+        TRUE ~ sid))
+sce$sid <- md$sid[match(sce$pid, md$pid)]
+table(sce$pid, sce$sid)
+```
+
+## metrics
+
+```{r qc -one}
+sub <- list(mt=grep("^MT-", rownames(sce)))
+sce <- addPerCellQCMetrics(sce, subsets=sub, BPPARAM=bp)
+```
+
+```{r plt-qc-one, fig.width=4, fig.height=5}
+th <- data.frame()
+ol <- matrix(nrow=ncol(sce), ncol=0)
+xs <- c("sum", "detected", "subsets_mt_percent")
+# total counts
+.ol <- isOutlier(
+    sce[[x <- xs[1]]], nmads=1.5, 
+    type="lower", log=TRUE, batch=sce$pid)
+.th <- attr(.ol, "threshold")[1, ]
+.th <- data.frame(pid=names(.th), name=x, value=.th)
+th <- rbind(th, .th); ol <- cbind(ol, sum=.ol)
+ # uniquely detected
+.ol <- isOutlier(
+    sce[[x <- xs[2]]], nmads=1.5, 
+    type="lower", log=TRUE, batch=sce$pid)
+.th <- attr(.ol, "threshold")[1, ]
+.th <- data.frame(pid=names(.th), name=x, value=.th)
+th <- rbind(th, .th); ol <- cbind(ol, det=.ol)
+# mitochondrial fraction
+.ol <- isOutlier(
+    sce[[x <- xs[3]]], nmads=3, 
+    type="higher", log=FALSE, batch=sce$pid)
+.th <- attr(.ol, "threshold")[2, ]
+.th <- data.frame(pid=names(.th), name=x, value=.th)
+th <- rbind(th, .th); ol <- cbind(ol, pmt=.ol)
+# plotting
+df <- data.frame(colData(sce))
+df <- filter(df, subsets_mt_percent < 10)
+fd <- pivot_longer(df, all_of(xs))
+.l <- \(.) mutate(., 
+    name=factor(name, xs), label=format(value, digits=2),
+    value=case_when(grepl("percent", name) ~ value, TRUE ~ log10(value)))
+fd <- .l(fd); th <- .l(th)
+round(100*mean(rowAnys(ol)), 2)
+ggplot(fd, aes(value, after_stat(ncount))) + 
+    geom_histogram(bins=50) +
+    facet_grid(pid~name, scales="free_x") +
+    scale_y_continuous("norm. count", n.breaks=2) +
+    geom_vline(aes(xintercept=value), th, col="red") +
+    geom_text(aes(Inf, Inf, label=label), th,
+        hjust=1, vjust=1, size=2, col="red") +
+    theme_bw(6) + theme(panel.grid.minor=element_blank())
+```
+
+## analysis
+
+### selection
+
+```{r sel}
+sce <- logNormCounts(sce, BPPARAM=bp)
+tbl <- modelGeneVar(sce, block=sce$pid, BPPARAM=bp)
+sel <- lapply(tbl$per.block, getTopHVGs, n=2e3)
+sel <- sapply(sel, \(.) rownames(sce) %in% .)
+length(sel <- rownames(sce)[rowSums(sel) > 1])
+```
+
+### integration
+
+```{r int}
+pcs <- prcomp_irlba(t(logcounts(sce[sel, ])), 30)$x
+pcs <- RunHarmony(pcs, meta_data=sce$run, verbose=FALSE)
+reducedDim(sce, "PCA") <- pcs
+```
+
+### clustering
+
+```{r clu, fig.width=4, fig.height=2}
+g <- buildSNNGraph(sce, use.dimred="PCA", type="jaccard", k=30, BPPARAM=bp)
+k <- cluster_louvain(g, resolution=1)$membership
+table(sce$kid <- factor(k, seq_along(unique(k))))
+df <- data.frame(colData(sce))
+fd <- tally(group_by(df, pid, kid))
+ggplot(fd, aes(n, pid, fill=kid)) +
+    geom_col(position="fill", key_glyph="point", width=1, col="black", linewidth=0.1) +
+    guides(fill=guide_legend(ncol=1, override.aes=list(shape=21, stroke=0, size=2))) +
+    scale_fill_manual(values=CATALYST:::.cluster_cols[seq_along(unique(sce$kid))]) +
+    scale_x_continuous(n.breaks=2) +
+    coord_cartesian(expand=FALSE) +
+    theme_linedraw(6) + theme(
+        aspect.ratio=1/2,
+        axis.title=element_blank(),
+        legend.key.size=unit(0.2, "lines"))
+```
+
+## cleaning
+
+```{r dx-run, message=FALSE, warning=FALSE}
+sce <- decontX(sce, 
+    z=sce$kid, verbose=FALSE,
+    batch=sce$run, bgBatch=bkg$run,
+    background=bkg[rownames(sce), ])
+```
+
+```{r dx-plt, fig.width=8, fig.height=4}
+par(mar=c(4,4,0,0))
+boxplot(sce$decontX_contamination~sce$kid, cex=0.5,
+    main="", xlab="cluster", ylab="contamination")
+```
+
+```{r dx-fin}
+logcounts(sce) <- NULL
+assayNames(sce) <- c(".counts", "counts")
+sce <- logNormCounts(sce, BPPARAM=bp)
+```
+
+## filtering
+
+```{r qc-two}
+sub <- list(mt=grep("^MT-", rownames(sce)))
+sce <- addPerCellQCMetrics(sce, subsets=sub, BPPARAM=bp)
+```
+
+```{r plt-qc-two, fig.width=4, fig.height=5}
+th <- data.frame()
+ol <- matrix(nrow=ncol(sce), ncol=0)
+xs <- c("sum", "detected", "subsets_mt_percent")
+# total counts
+.ol <- isOutlier(
+    sce[[x <- xs[1]]], nmads=1.5, 
+    type="lower", log=TRUE, batch=sce$pid)
+.th <- attr(.ol, "threshold")[1, ]
+.th <- data.frame(pid=names(.th), name=x, value=.th)
+th <- rbind(th, .th); ol <- cbind(ol, sum=.ol)
+ # uniquely detected
+.ol <- isOutlier(
+    sce[[x <- xs[2]]], nmads=1.5, 
+    type="lower", log=TRUE, batch=sce$pid)
+.th <- attr(.ol, "threshold")[1, ]
+.th <- data.frame(pid=names(.th), name=x, value=.th)
+th <- rbind(th, .th); ol <- cbind(ol, det=.ol)
+# mitochondrial fraction
+.ol <- isOutlier(
+    sce[[x <- xs[3]]], nmads=3, 
+    type="higher", log=FALSE, batch=sce$pid)
+.th <- attr(.ol, "threshold")[2, ]
+.th <- data.frame(pid=names(.th), name=x, value=.th)
+th <- rbind(th, .th); ol <- cbind(ol, pmt=.ol)
+# plotting
+df <- data.frame(colData(sce))
+df <- filter(df, subsets_mt_percent < 10)
+fd <- pivot_longer(df, all_of(xs))
+.l <- \(.) mutate(., 
+    name=factor(name, xs), label=format(value, digits=2),
+    value=case_when(grepl("percent", name) ~ value, TRUE ~ log10(value)))
+fd <- .l(fd); th <- .l(th)
+ggplot(fd, aes(value, after_stat(ncount))) + 
+    geom_histogram(bins=50) +
+    facet_grid(pid~name, scales="free_x") +
+    scale_y_continuous("norm. count", n.breaks=2) +
+    geom_vline(aes(xintercept=value), th, col="red") +
+    geom_text(aes(Inf, Inf, label=label),
+        th, hjust=1, vjust=1, size=2, col="red") +
+    theme_bw(6) + theme(panel.grid.minor=element_blank())
+```
+
+```{r sub}
+# cell-level
+round(100*mean(ex_cs <- rowAnys(ol)), 1)
+round(100*prop.table(table(sce$run, ex_cs), 1), 1)
+round(100*prop.table(table(sce$pid, ex_cs), 1), 1)
+# gene-level
+table(ex_gs <- rowSums(counts(sce) > 1) < 20)
+dim(sub <- sce[!ex_gs, !ex_cs])
+round(100*ncol(sub)/ncol(sce), 1)
+round(100*nrow(sub)/nrow(sce), 1)
+```
+
+## appendix
+
+### saving
+
+```{r save-data}
+metadata(sub) <- list()
+reducedDims(sub) <- list()
+assays(sub) <- assays(sub)[-1]
+saveRDS(sce, "../outs/sce-raw.rds")
+saveRDS(sub, "../outs/sce-fil.rds")
+```
+
+::: {.callout-note icon=false, collapse=true}
+
+### session
+
+```{r si}
+#| code-fold: false
+sessionInfo()
+```
+
+:::

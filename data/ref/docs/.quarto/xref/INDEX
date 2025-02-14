@@ -1,0 +1,32 @@
+{
+  "00-quality.qmd": {
+    "00-quality.html": "03ef5817"
+  },
+  "01-analysis.qmd": {
+    "01-analysis.html": "68d090ea"
+  },
+  "02-subsets.qmd": {
+    "02-subsets.html": "c6f30a38"
+  },
+  "index.qmd": {
+    "index.html": "4c8b3e62"
+  },
+  "01-dbl.qmd": {
+    "01-dbl.html": "5067880c"
+  },
+  "00-fil.qmd": {
+    "00-fil.html": "62ce3c65"
+  },
+  "02-lv1.qmd": {
+    "02-lv1.html": "a05f5eba"
+  },
+  "03-lv2.qmd": {
+    "03-lv2.html": "a921319a"
+  },
+  "03-sub.qmd": {
+    "03-sub.html": "7fb3c0b7"
+  },
+  "04-lv2.qmd": {
+    "04-lv2.html": "4b24f0ac"
+  }
+}

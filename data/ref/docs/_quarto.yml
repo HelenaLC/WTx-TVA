@@ -1,0 +1,42 @@
+execute: 
+  cache: false
+  message: false
+  warning: false
+
+project:
+  type: website
+  execute-dir: project
+  render:
+    - index.qmd
+    - 00-fil.qmd
+    - 01-dbl.qmd
+    - 02-lv1.qmd
+    - 03-sub.qmd
+    - 04-lv2.qmd
+
+format:
+  html:
+    theme: simplex
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    standalone: true
+    embed-resources: true
+    
+website:
+  title: snPATHO-seq
+  navbar:
+    search: false
+    left:
+      - text: "contents"
+        href: index.qmd
+      - href: 00-fil.qmd
+        text: quality
+      - href: 01-dbl.qmd
+        text: doublets
+      - href: 02-lv1.qmd
+        text: low-res.
+      - href: 03-sub.qmd
+        text: subsets
+      - href: 04-lv2.qmd
+      - href: high-res.

@@ -1,0 +1,174 @@
+## preamble
+
+### setup
+
+```{r load-libs, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(scran)
+library(scater)
+library(ggplot2)
+library(tidytext)
+library(patchwork)
+library(BiocParallel)
+bp <- MulticoreParam(10)
+source("utils.R")
+set.seed(241124)
+```
+
+### loading
+
+```{r load-data}
+(sce <- readRDS("../outs/sce-dbl.rds"))
+```
+
+## plotting
+
+### composition
+
+```{r plt-fq-kid, fig.width=4, fig.height=2}
+.plt_fq(sce, x="kid", y="sid")
+```
+
+### regression
+
+```{r pcr-kid, fig.width=6, fig.height=3}
+ids <- c("sum", "run", "sid", "kid")
+pal <- c("magenta", "gold", "cyan", "blue")
+.plt_pcr(.pcr(sce, ids)) + scale_color_manual(values=pal)
+```
+
+### reduction
+
+```{r plt-map-kid, fig.width=15, fig.height=4}
+.plt_dr(sce, c("run", "sid", "kid"))
+```
+
+### markers
+
+```{r mgs-kid}
+mgs <- findMarkers(sce, 
+    groups=sce$kid, block=sce$pid, 
+    direction="up", add.summary=TRUE, BPPARAM=bp)
+```
+
+```{r plt-hm-kid, fig.width=5, fig.height=14}
+top <- lapply(mgs, \(df) rownames(df)[df$Top <= 5])
+length(top <- unique(unlist(top)))
+ids <- colData(sce)["kid"]
+pbs <- aggregateAcrossCells(sce, 
+    ids, subset.row=top, BPPARAM=bp, 
+    use.assay.type="logcounts", statistics="mean")
+pal <- setNames(.pal[seq_along(ks)], ks <- levels(sce$kid))
+plotHeatmap(pbs, top, fontsize=4, scale=TRUE, center=TRUE, 
+    color_columns_by=names(ids), column_annotation_colors=list(kid=pal))
+```
+
+## labelling
+
+```{r}
+lab <- c( # NA: b, r, t, v
+    a="TC", c="epi1", d="BC", e="mast", f="PC_IgA", 
+    g="epi2", h="mye1", i="mye2", j="PC_IgA", k="PC_IgA", 
+    l="fib1", m="epi3", n="PC_IgA", o="PC_IgM", p="EC", 
+    q="SMC", s="fib2", u="epi4", w="PC_IgG")
+idx <- match(sce$kid, names(lab))
+table(sce$lv1 <- lab[idx])
+table(droplevels(sce$kid[is.na(sce$lv1)]))
+```
+
+## plotting
+
+### composition
+
+```{r plt-fq-lab, fig.width=4, fig.height=2}
+.plt_fq(sce, x="lv1", y="sid")
+```
+
+```{r echo=FALSE}
+ggsave("../plts/fq-lv1.pdf", units="cm", width=8, height=4)
+```
+
+### regression
+
+```{r pcr-lab, fig.width=6, fig.height=3}
+ids <- c("sum", "run", "sid", "kid", "lv1")
+pal <- c("magenta", "gold", "cyan", "blue", "green")
+.plt_pcr(.pcr(sce, ids)) + scale_color_manual(values=pal)
+```
+
+### reduction
+
+```{r plt-map-lab, fig.width=15, fig.height=4}
+.plt_dr(sce, c("run", "sid", "lv1"))
+```
+
+### markers
+
+```{r mgs-lab}
+mgs <- findMarkers(sce, 
+    groups=sce$lv1, block=sce$pid, 
+    direction="up", add.summary=TRUE, BPPARAM=bp)
+```
+
+```{r plt-hm-lab, fig.width=4, fig.height=12}
+top <- lapply(mgs, \(df) rownames(df)[df$Top <= 5])
+length(top <- unique(unlist(top)))
+pbs <- aggregateAcrossCells(sce,
+    use.assay.type="logcounts", statistics="mean",
+    ids <- colData(sce)["lv1"], subset.row=top, BPPARAM=bp)
+(hm <- plotHeatmap(pbs, 
+    top, fontsize=3,
+    scale=TRUE, center=TRUE,
+    color_columns_by=names(ids),
+    treeheight_row=10,
+    treeheight_col=10))
+```
+
+```{r echo=FALSE}
+pdf("../plts/hm-lv1.pdf", width=6/2.54, height=24/2.54)
+print(hm); dev.off()
+```
+
+## profiles
+
+### aggregation
+
+```{r ref-pbs, warning=FALSE}
+ids <- colData(sce)[c("pid", "lv1")]
+pbs <- aggregateAcrossCells(sce, ids, BPPARAM=bp)
+sizeFactors(pbs) <- NULL
+pbs <- logNormCounts(pbs, log=FALSE)
+pbs <- aggregateAcrossCells(pbs, pbs$lv1,
+    statistics="mean", use.assay.type="normcounts")
+```
+
+### selection
+
+```{r ref-sel, warning=FALSE}
+gs <- lapply(mgs, \(df) 
+    rownames(df)[
+        df$Top <= 200 &
+        df$summary.logFC > 0])
+sapply(gs, head); length(gs <- unique(unlist(gs)))
+```
+
+## appendix
+
+### saving
+
+```{r save-data}
+saveRDS(sce, "../outs/sce-lv1.rds")
+saveRDS(assay(pbs)[gs, ], "../outs/pbs-lv1.rds")
+```
+
+::: {.callout-note icon=false, collapse=true}
+
+### session
+
+```{r session-info}
+#| code-fold: false
+sessionInfo()
+```
+
+:::

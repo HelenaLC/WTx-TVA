@@ -1,0 +1,30 @@
+# contents
+
+- [00-fil.qmd](quality)
+  - quality metrics-based filtering
+  - ambient RNA correction with `decontX`
+  
+- [01-dbl.qmd](doublets)
+  - variable feature selection with `scran`
+  - `harmony` integration across runs
+  - SNN graph-based Leiden clustering
+  - doublet filtering with `scDblFinder`
+  - PCR against variables of interest
+  - dimensionality reduction plots
+  - heatmaps of cluster-wise DEGs
+  - composition across patients
+  
+- [02-lv1.qmd](low-res.)
+  - annotation of broad subpopulations
+  - bulk profiles of top-DEGs
+  - visualization (see above)
+  
+- [03-sub.qmd](subsets)
+  - splitting of cells by compartment (imm, epi, str)
+  - compartment-wise re-integration and clustering
+  - gene set signature scoring with `AUCell`
+  - visualization (see above)
+  
+- [04-lv2.qmd](high-.res)
+  - compartment-wise annotation of subpopulations
+  - compartment-wise bulk profiles of top-DEGs

@@ -2,7 +2,6 @@ _*/
 figs/
 imgs/
 meta/
-data/ref/
 outs/raw-*
 code/11-*
 logs/*

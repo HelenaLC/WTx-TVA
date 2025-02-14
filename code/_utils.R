@@ -396,7 +396,7 @@
 }
 
 # plot cluster composition by field of view
-.plt_fq <- \(z, x, y, id="", by=NULL, hc=TRUE, h=FALSE, a=1) {
+.plt_fq <- \(z, x, y, id="", by=NULL, hc=TRUE, h=FALSE, a=1, ...) {
     library(ggplot2)
     library(SingleCellExperiment)
     # tabulate cell counts
@@ -408,9 +408,12 @@
     i <- match(df[[1]], z[[x]])
     j <- setdiff(names(z), c(x, y))
     df <- cbind(df, z[i, j])
+    if (!is.null(by)) df[[by]] <- z[[by]][i]
     # hierarchical clustering
     xo <- if (hc) {
-        hc <- hclust(dist(prop.table(ns, 1)))
+        ds <- dist(prop.table(ns, 1))
+        ds[is.na(ds)] <- 0
+        hc <- hclust(ds)
         hc$labels[hc$order]
     } else rownames(ns)
     # plotting
@@ -421,6 +424,7 @@
             axis.text.x=element_text(angle=90, hjust=1, vjust=0.5)))
     }
     ggplot(df, aes(Var1, Freq, fill=Var2)) +
+        (if (!is.null(by)) facet_wrap(by, ...)) +
         geom_col(
             position="fill", col="white", alpha=a,
             linewidth=0.1, width=1, key_glyph="point") +

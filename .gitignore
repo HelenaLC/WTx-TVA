@@ -19,3 +19,4 @@ logs/*
 **/*.parquet
 .snakemake/
 !*/.gitkeep
+data/ref/docs/.quarto

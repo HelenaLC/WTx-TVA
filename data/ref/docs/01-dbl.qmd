@@ -14,7 +14,7 @@ library(ggplot2)
 library(tidytext)
 library(scDblFinder)
 library(BiocParallel)
-bp <- MulticoreParam(10)
+bp <- MulticoreParam(50)
 set.seed(241124)
 ```
 

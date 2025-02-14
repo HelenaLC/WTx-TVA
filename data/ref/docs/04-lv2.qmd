@@ -1,4 +1,4 @@
-## high-res.
+## preamble
 
 ### setup
 
@@ -178,10 +178,13 @@ pbs <- lapply(lys, \(sce) {
 ### saving
 
 ```{r save-data}
-for (. in sub)
-    saveRDS(
-        assay(pbs[[.]])[sel[[.]], ],
-        sprintf("../outs/pbs-lv2,%s.rds", .))
+for (. in sub) {
+    rds <- sprintf("../outs/pbs-lv2,%s.rds", .)
+    if (!file.exists(rds)) {
+        mtx <- assay(pbs[[.]])[sel[[.]], ]
+        saveRDS(mtx, rds)
+    }
+}
 ```
 
 ::: {.callout-note icon=false, collapse=true}

@@ -11,7 +11,7 @@ library(ggplot2)
 library(tidytext)
 library(patchwork)
 library(BiocParallel)
-bp <- MulticoreParam(10)
+bp <- MulticoreParam(50)
 source("utils.R")
 set.seed(241124)
 ```
@@ -158,8 +158,8 @@ sapply(gs, head); length(gs <- unique(unlist(gs)))
 ### saving
 
 ```{r save-data}
-saveRDS(sce, "../outs/sce-lv1.rds")
-saveRDS(assay(pbs)[gs, ], "../outs/pbs-lv1.rds")
+if (!file.exists(rds <- "../outs/sce-lv1.rds")) saveRDS(sce, rds)
+if (!file.exists(rds <- "../outs/pbs-lv1.rds")) saveRDS(assay(pbs)[gs, ], rds)
 ```
 
 ::: {.callout-note icon=false, collapse=true}

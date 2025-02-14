@@ -2,6 +2,8 @@
 
 ### setup
 
+
+
 ```{r load-libs, message=FALSE, warning=FALSE}
 library(dplyr)
 library(tidyr)
@@ -20,7 +22,11 @@ source("utils.R")
 set.seed(240214)
 ```
 
+
+
 ### loading
+
+
 
 ```{r load-data}
 sce <- readRDS("../outs/sce-lv1.rds")
@@ -39,7 +45,11 @@ sapply(lys, ncol)
 stopifnot(sum(sapply(lys, ncol)) == sum(!is.na(sce$lv1)))
 ```
 
+
+
 ## selection
+
+
 
 ```{r sel}
 sel <- lapply(lys, \(sce) {
@@ -51,7 +61,11 @@ sel <- lapply(lys, \(sce) {
 sapply(sel, length)
 ```
 
+
+
 ## integration
+
+
 
 ```{r int}
 lys <- mapply(sce=lys, sel=sel, \(sce, sel) {
@@ -62,7 +76,11 @@ lys <- mapply(sce=lys, sel=sel, \(sce, sel) {
 })
 ```
 
+
+
 ## clustering
+
+
 
 ```{r clu}
 .clu <- \(sce, res) {
@@ -82,11 +100,15 @@ lapply(lys, \(.) table(.$kid))
 sapply(lys, \(.) nlevels(.$kid))
 ```
 
+
+
 ## plotting
 
 ### compositions
 
 ::: {.panel-tabset}
+
+
 
 ```{r plt-fq-one, results="asis", fig.width=4, fig.height=2}
 for (. in names(lys)) {
@@ -95,11 +117,15 @@ for (. in names(lys)) {
 }
 ```
 
+
+
 :::
 
 ### regression
 
 ::: {.panel-tabset}
+
+
 
 ```{r pcr-kid, results="asis", fig.width=6, fig.height=3}
 ids <- c("sum", "run", "sid", "kid")
@@ -111,11 +137,15 @@ for (. in sub) {
 }
 ```
 
+
+
 :::
 
 ### reduction
 
 ::: {.panel-tabset}
+
+
 
 ```{r plt-map-one, results="asis", fig.width=15, fig.height=5}
 ids <- c("run", "sid", "kid")
@@ -125,9 +155,13 @@ for (. in sub) {
 }
 ```
 
+
+
 :::
 
 ### contingency
+
+
 
 ```{r tbl, fig.width=12, fig.height=2.5}
 lapply(sub, \(.) {
@@ -143,7 +177,11 @@ lapply(sub, \(.) {
 }) |> wrap_plots(nrow=1)
 ```
 
+
+
 ### markers
+
+
 
 ```{r mgs-de}
 mgs <- lapply(lys, \(sub) findMarkers(
@@ -156,7 +194,11 @@ mgs <- lapply(lys, \(sub) findMarkers(
 lapply(sub, \(.) sapply(mgs[[.]], \(df) head(rownames(df)[order(-df$summary.logFC)], 20)))
 ```
 
+
+
 ::: {.panel-tabset}
+
+
 
 ```{r mgs-hm, results="asis", fig.width=15, fig.height=4}
 ps <- lapply(sub, \(.) {
@@ -171,11 +213,15 @@ ps <- lapply(sub, \(.) {
 for (. in sub) { cat("#### ", ., "\n"); print(ps[[.]]); cat("\n\n") }
 ```
 
+
+
 :::
 
 ## downstreams
 
 ### canonical
+
+
 
 ```{r mgs-lys}
 # Human Protein Atlas - single cell - tissue cell type - colon
@@ -217,7 +263,11 @@ ps <- lapply(sub, \(.) .plt_hm(lys[[.]], auc[[.]], by=c("kid", "pid"), id=.))
 wrap_plots(ps, nrow=1) + plot_layout(guides="collect")
 ```
 
+
+
 ::: {.panel-tabset}
+
+
 
 ```{r mgs-qlt, results="asis", fig.width=12, fig.height=3}
 mgs_lys <- list(
@@ -235,9 +285,13 @@ for (. in sub) for (.. in mgs_lys[[.]]) {
 }
 ```
 
+
+
 :::
 
 ### signatures
+
+
 
 ```{r sig-lys}
 # collect list of signatures from MSigDB
@@ -311,7 +365,11 @@ ps <- lapply(sub, \(.) .plt_hm(lys[[.]], auc[[.]], by=c("kid", "pid"), id=.))
 wrap_plots(ps, nrow=1) + plot_layout(guides="collect")
 ```
 
+
+
 ### selected
+
+
 
 ```{r fig.width=12, fig.height=6}
 mgs <- list(
@@ -366,21 +424,31 @@ lapply(sub, \(.) {
 }) |> wrap_plots(nrow=1,) + plot_layout(nrow=1)
 ```
 
+
+
 ## appendix
 
 ### saving
+
+
 
 ```{r save-data}
 for (. in sub) saveRDS(lys[[.]], sprintf("../outs/sub-%s.rds", .))
 ```
 
+
+
 ::: {.callout-note icon=false, collapse=true}
 
 ### session
+
+
 
 ```{r session-info}
 #| code-fold: false
 sessionInfo()
 ```
+
+
 
 :::

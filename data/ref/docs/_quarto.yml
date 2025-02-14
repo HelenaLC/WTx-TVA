@@ -39,4 +39,4 @@ website:
       - href: 03-sub.qmd
         text: subsets
       - href: 04-lv2.qmd
-      - href: high-res.
+        text: high-res.

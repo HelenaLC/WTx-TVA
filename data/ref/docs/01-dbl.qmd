@@ -14,7 +14,8 @@ library(ggplot2)
 library(tidytext)
 library(scDblFinder)
 library(BiocParallel)
-bp <- MulticoreParam(50)
+bp <- MulticoreParam(th <- 50)
+source("utils.R")
 set.seed(241124)
 ```
 
@@ -27,9 +28,12 @@ set.seed(241124)
 ## selection
 
 ```{r sel}
+# get top-2,000 variables features per patient,
+# excluding histones, ribosomal, mitochondrial
 tbl <- modelGeneVar(sce, block=sce$pid, BPPARAM=bp)
 tbl <- tbl[-grep("^H[0-9]|^RP(L|S)|^MT-", rownames(tbl)), ]
 sel <- lapply(tbl$per.block, getTopHVGs, n=2e3)
+# use features selected in more than one patient
 sel <- sapply(sel, \(.) rownames(sce) %in% .)
 length(sel <- rownames(sce)[rowSums(sel) > 1])
 ```
@@ -37,15 +41,19 @@ length(sel <- rownames(sce)[rowSums(sel) > 1])
 ## integration
 
 ```{r int}
-reducedDim(sce, "PCA") <- RunHarmony(
-    meta_data=sce$run, verbose=FALSE,
-    prcomp_irlba(t(logcounts(sce[sel, ])), 30)$x)
+# principal component analysis on selected features
+pcs <- prcomp_irlba(t(logcounts(sce[sel, ])), 30)$x
+# 'harmony' integration across runs
+pcs <- RunHarmony(pcs, meta_data=sce$run, verbose=FALSE, ncores=th)
+reducedDim(sce, "PCA") <- pcs
 sce <- runUMAP(sce, dimred="PCA", BPPARAM=bp)
 ```
 
 ## clustering
 
 ```{r clu}
+# shared nearest-neighbor (SNN) graph-based clustering
+# using Leiden community detection algorithm
 g <- buildSNNGraph(sce, use.dimred="PCA", type="jaccard", k=30, BPPARAM=bp)
 k <- cluster_leiden(g, objective_function="modularity", resolution=1)
 table(sce$kid <- factor(k <- k$membership, labels=letters[seq_along(unique(k))]))
@@ -54,7 +62,9 @@ table(sce$kid <- factor(k <- k$membership, labels=letters[seq_along(unique(k))])
 ## doublets
 
 ```{r dbl-sco, message=FALSE, warning=FALSE}
-sce <- scDblFinder(sce, sce$kid, sce$pid, BPPARAM=bp)
+# sample-wise doublet scoring, grouping by clusters; high 'dbr.sd' 
+# so that expected doublet rate has no effect on scoring/thresholding 
+sce <- scDblFinder(sce, sce$kid, sce$pid, dbr.sd=1, BPPARAM=bp)
 ```
 
 ```{r plt-dbl-sco, fig.width=6, fig.height=3}

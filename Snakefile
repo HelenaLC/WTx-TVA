@@ -575,7 +575,7 @@ rule plt__all_sid__all_sid_all_sub:
 def out_sid(out, typ="rds"): return(expand("outs/{out}-{sid}.{typ}", 
 	out=out, sid=SID, typ="parquet" if out == "pol" else "rds"))
 def out_sid_sub(out): return(expand("outs/{out}-{sid},{sub}.rds", out=out, sid=SID, sub=SUB))
-def out_ist(n): if n == 1: return(out_sid("lv1")) else: return(out_sid_sub("lv2"))
+def out_ist(n): return(out_sid("lv1") if n == 1 else out_sid_sub("lv2"))
 
 # transition crypts
 for n in [1, 2]:

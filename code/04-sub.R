@@ -16,5 +16,5 @@ sapply(sub <- lapply(idx, \(.) sce[, .]), ncol)
 for (. in seq_along(sub)) {
     obj <- sub[[.]]
     rds <- args[[2+.]]
-    saveRDS(obj, rds)
+    base::saveRDS(obj, rds)
 }

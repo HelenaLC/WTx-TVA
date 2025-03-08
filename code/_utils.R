@@ -1,6 +1,6 @@
 # pal ----
 .pal_roi <- c(REF="seagreen", TVA="royalblue", CRC="tomato")
-.pal_sub <- c(imm="cyan", epi="gold", str="magenta")
+.pal_sub <- c(imm="cyan2", epi="gold2", str="magenta2")
 .pal_kid <- unname(pals::trubetskoy())
 .pal <- c(
     "#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72",

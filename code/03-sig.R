@@ -1,8 +1,8 @@
 # dependencies
 suppressPackageStartupMessages({
     library(AUCell)
-    library(msigdbr)
     library(scuttle)
+    library(jsonlite)
     library(HDF5Array)
     library(BiocParallel)
     library(SingleCellExperiment)
@@ -11,22 +11,26 @@ suppressPackageStartupMessages({
 # setup
 th <- as.integer(args$ths)
 bp <- MulticoreParam(th)
-set.seed(250131)
+set.seed(250308)
 
 # loading
 sce <- readRDS(args[[1]])
-df <- msigdbr()
+sig <- lapply(args[[2]], read.delim, header=FALSE)
+sapply(sig <- lapply(sig, unlist), length)
 
 # retrieve sets
-pat <- c(
-    "HALLMARK",
-    "DESCARTES_FETAL_INTESTINE")
-pat <- paste(pat, collapse="|")
-fd <- df[grepl(pat, df$gs_name), ]
-
-# get gene symbols by set
-fd <- fd[fd$gene_symbol %in% rownames(sce), ]
-gs <- split(fd$gene_symbol, fd$gs_name)
+url <- "https://www.gsea-msigdb.org/gsea/msigdb/human/download_geneset.jsp?geneSetName=%s&fileType=json"
+names(gs) <- gs <- unlist(sig)
+gs <- lapply(gs, \(.) {
+    url <- sprintf(url, .)
+    tf <- tempfile(fileext=".json")
+    download.file(url, tf, quiet=TRUE)
+    tryCatch({
+        gs <- fromJSON(tf)[[1]]$geneSymbols
+        intersect(gs, rownames(sce))
+    }, error=\(e) NULL)
+})
+gs <- gs[!vapply(gs, is.null, logical(1))]
 range(sapply(gs, length)); length(gs)
 
 # log-library size normalization
@@ -44,5 +48,10 @@ res <- res[, colnames(sce)]
 colData(res) <- colData(sce)
 
 # saving
+sub <- gsub(".*(imm|epi|str).*", "\\1", args[[2]])
+sub <- rep.int(sub, sapply(sig, length))
+names(sub) <- unlist(sig)
+sub <- sub[names(gs)]
 rowData(res)$set <- gs
-saveRDS(res, args[[2]])
+rowData(res)$sub <- sub
+saveRDS(res, args[[3]])

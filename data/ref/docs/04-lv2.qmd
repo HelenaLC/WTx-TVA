@@ -179,11 +179,11 @@ pbs <- lapply(lys, \(sce) {
 
 ```{r save-data}
 for (. in sub) {
-    rds <- sprintf("../outs/pbs-lv2,%s.rds", .)
-    if (!file.exists(rds)) {
+    rds <- sprintf("../outs/qbs-lv2,%s.rds", .)
+    #if (!file.exists(rds)) {
         mtx <- assay(pbs[[.]])[sel[[.]], ]
         saveRDS(mtx, rds)
-    }
+    #}
 }
 ```
 

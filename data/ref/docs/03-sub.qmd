@@ -17,7 +17,7 @@ library(patchwork)
 library(BiocParallel)
 bp <- MulticoreParam(th <- 50)
 source("utils.R")
-set.seed(240214)
+set.seed(250308)
 ```
 
 ### loading
@@ -71,9 +71,9 @@ lys <- mapply(sce=lys, sel=sel, \(sce, sel) {
     l <- letters[seq_along(unique(k <- k$membership))]
     sce$kid <- factor(k, labels=l); sce
 }
-set.seed(1); lys$epi <- .clu(lys$epi, 1.2)
-set.seed(2); lys$imm <- .clu(lys$imm, 1.0)
-set.seed(3); lys$str <- .clu(lys$str, 0.8)
+set.seed(7); lys$epi <- .clu(lys$epi, 1.8)
+set.seed(7); lys$str <- .clu(lys$str, 1.4)
+set.seed(7); lys$imm <- .clu(lys$imm, 1.0)
 ```
 
 ```{r clu-ns}
@@ -371,7 +371,10 @@ lapply(sub, \(.) {
 ### saving
 
 ```{r save-data}
-for (. in sub) saveRDS(lys[[.]], sprintf("../outs/sub-%s.rds", .))
+for (. in sub) {
+    rds <- sprintf("../outs/sub-%s.rds", .)
+    if (!file.exists(rds)) saveRDS(lys[[.]], rds)
+}
 ```
 
 ::: {.callout-note icon=false, collapse=true}

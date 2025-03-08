@@ -52,7 +52,7 @@ mgs <- findMarkers(sce,
     direction="up", add.summary=TRUE, BPPARAM=bp)
 ```
 
-```{r plt-hm-kid, fig.width=5, fig.height=14}
+```{r plt-mgs-kid-joint, fig.width=5, fig.height=14}
 top <- lapply(mgs, \(df) rownames(df)[df$Top <= 5])
 length(top <- unique(unlist(top)))
 ids <- colData(sce)["kid"]
@@ -63,6 +63,27 @@ pal <- setNames(.pal[seq_along(ks)], ks <- levels(sce$kid))
 plotHeatmap(pbs, top, fontsize=4, scale=TRUE, center=TRUE, 
     color_columns_by=names(ids), column_annotation_colors=list(kid=pal))
 ```
+
+::: {.panel-tabset}
+
+```{r plt-mgs-kid-split, results="asis", fig.width=3, fig.height=5}
+top <- lapply(mgs, \(df) rownames(df)[df$Top <= 10])
+pbs <- aggregateAcrossCells(sce, 
+    ids=colData(sce)[ids <- "kid"], 
+    statistics="mean", use.assay.type="logcounts",
+    subset.row=unique(unlist(top)), BPPARAM=bp)
+pal <- .pal[seq_along(nms <- unique(sce[[ids]]))]
+names(pal) <- nms; pal <- list(pal); names(pal) <- ids
+for (. in names(mgs)) {
+    cat("#### ", ., "\n")
+    plotHeatmap(pbs, top[[.]], scale=TRUE, center=TRUE, 
+        fontsize=6, treeheight_row=6, treeheight_col=6,
+        color_columns_by=ids, column_annotation_colors=pal)
+    cat("\n\n")
+}
+```
+
+:::
 
 ## labelling
 
@@ -111,7 +132,7 @@ mgs <- findMarkers(sce,
     direction="up", add.summary=TRUE, BPPARAM=bp)
 ```
 
-```{r plt-hm-lab, fig.width=4, fig.height=12}
+```{r plt-mgs-lab-joint, fig.width=4, fig.height=12}
 top <- lapply(mgs, \(df) rownames(df)[df$Top <= 5])
 length(top <- unique(unlist(top)))
 pbs <- aggregateAcrossCells(sce,
@@ -130,6 +151,27 @@ pdf("../plts/hm-lv1.pdf", width=6/2.54, height=24/2.54)
 print(hm); dev.off()
 ```
 
+::: {.panel-tabset}
+
+```{r plt-mgs-lab-split, results="asis", fig.width=3, fig.height=5}
+top <- lapply(mgs, \(df) rownames(df)[df$Top <= 10])
+pbs <- aggregateAcrossCells(sce, 
+    ids=colData(sce)[ids <- "lv1"], 
+    statistics="mean", use.assay.type="logcounts",
+    subset.row=unique(unlist(top)), BPPARAM=bp)
+pal <- .pal[seq_along(nms <- unique(sce[[ids]]))]
+names(pal) <- nms; pal <- list(pal); names(pal) <- ids
+for (. in names(mgs)) {
+    cat("#### ", ., "\n")
+    plotHeatmap(pbs, top[[.]], scale=TRUE, center=TRUE, 
+        fontsize=6, treeheight_row=6, treeheight_col=6,
+        color_columns_by=ids, column_annotation_colors=pal)
+    cat("\n\n")
+}
+```
+
+:::
+
 ## profiles
 
 ### aggregation
@@ -146,10 +188,7 @@ pbs <- aggregateAcrossCells(pbs, pbs$lv1,
 ### selection
 
 ```{r ref-sel, warning=FALSE}
-gs <- lapply(mgs, \(df) 
-    rownames(df)[
-        df$Top <= 200 &
-        df$summary.logFC > 0])
+gs <- lapply(mgs, \(df) rownames(df)[df$Top <= 200])
 sapply(gs, head); length(gs <- unique(unlist(gs)))
 ```
 

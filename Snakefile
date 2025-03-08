@@ -238,14 +238,16 @@ rule ccc:
 
 # signatures
 rule sig:
-	priority: 97
-	threads: 10
-	input:	"code/03-sig.R", fil
-	output:	sig
-	log:    "logs/sig-{sid}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {output[0]} ths={threads}" {input[0]} {log}'''
+    priority: 97
+    threads: 10
+    input:  "code/03-sig.R", fil, 
+            x = expand("meta/sig/sig-{sub}.txt", sub=SUB)
+    params: lambda wc, input: ";".join(input.x)
+    output:	sig
+    log:    "logs/sig-{sid}.Rout"
+    shell: '''R CMD BATCH\\
+    --no-restore --no-save "--args wcs={wildcards}\
+    {input[1]} {params} {output} ths={threads}" {input[0]} {log}'''
 
 # clustering
 rule ist:

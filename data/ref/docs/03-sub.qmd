@@ -17,7 +17,7 @@ library(patchwork)
 library(BiocParallel)
 bp <- MulticoreParam(th <- 50)
 source("utils.R")
-set.seed(250308)
+set.seed(250309)
 ```
 
 ### loading
@@ -44,6 +44,7 @@ stopifnot(sum(sapply(lys, ncol)) == sum(!is.na(sce$lv1)))
 ```{r sel}
 sel <- lapply(lys, \(sce) {
     tbl <- modelGeneVar(sce, block=sce$pid, BPPARAM=bp)
+    tbl <- tbl[-grep("^H[0-9]|^RP(L|S)|^MT-", rownames(tbl)), ]
     sel <- lapply(tbl$per.block, getTopHVGs, n=2e3)
     sel <- sapply(sel, \(.) rownames(sce) %in% .)
     rownames(sce)[rowSums(sel) > 1]
@@ -173,69 +174,83 @@ for (. in sub) { cat("#### ", ., "\n"); print(ps[[.]]); cat("\n\n") }
 
 :::
 
-## downstreams
-
-### canonical
-
-```{r mgs-lys}
-# Human Protein Atlas - single cell - tissue cell type - colon
-b <- "%3BVery%20high%2CHigh%2CModerate&columns=g,gd&compress=no&format=json"
-a <- "https://www.proteinatlas.org/api/search_download.php?search=ce_enriched%3Acolon%3B"
-url <- c(
-    TC="T-cells",
-    mac="macrophages",
-    fib="fibroblasts",
-    PC="plasma%20cells",
-    mast="mast%20cells",
-    neutro="neutrophils",
-    EC="endothelial%20cells",
-    entero="colon%20enterocytes",
-    SMC="smooth%20muscle%20cells",
-    glia="enteric%20glia%20cells",
-    endocrine="colon%20enteroendocrine%20cells")
-mgs <- lapply(url, \(.) {
-    . <- paste0(a, ., b)
-    tf <- tempfile(fileext=".json")
-    download.file(., destfile=tf, mode="wb")
-    gs <- jsonlite::fromJSON(tf)$Gene
-    intersect(gs, rownames(sce))
-})
-sapply(mgs, length)
-length(unique(unlist(mgs)))
-```
-
-```{r mgs-run}
-auc <- lapply(sub, \(.) {
-    mtx <- logcounts(lys[[.]])
-    rnk <- AUCell_buildRankings(mtx, BPPARAM=bp, plotStats=FALSE, verbose=FALSE)
-    AUCell_calcAUC(mgs, rnk, nCores=th, verbose=FALSE)
-})
-```
-
-```{r mgs-plt, fig.width=12, fig.height=3}
-ps <- lapply(sub, \(.) .plt_hm(lys[[.]], auc[[.]], by=c("kid", "pid"), id=.))
-wrap_plots(ps, nrow=1) + plot_layout(guides="collect")
+```{r}
+gs <- list(
+    imm=list(
+        Bm=c("BCL7A", "CR2", "CD19", "CD40", "CD69", "CD79A", "CD83", "CIITA", "SELL", "IGHD"),
+        Bn=c("BANK1", "MS4A1"),
+        Ba=c("BIRC5"),
+        PC_IgA=c("MZB1", "XBP1", "IGHA1"),
+        PC_IgG=c("IGHG1"), 
+        PC_IgM=c("IGHM"),
+        Th=c("CD2", "CD3D", "CD4", "ICOS", "CCR4"),
+        Tc=c("CD8A", "GZMA", "GZMK", "NKG7"),
+        Tp=c("MKI67", "TOP2A"),
+        mast=c("KIT", "IL1RL1"),
+        cDC2_CCR7=c("CCR7"),
+        cDC1=c("LAMP3", "CLEC10A", "ITGAX"),
+        nphil=c("IL1B", "S100A8", "S100A9", "MMP9"),
+        TRM=c("CD14", "CD68", "CD163", "APOE", "APOC1", "CTSD", "C1QA", "C1QB", "C1QC")
+    ),
+    epi=list(
+        epi.EE=c(
+            c("BEST4", "CA7", "OTOP2", "CTFR", "CA1", "GPT", "MUC17", "TFF1",
+        "CD55", "TM4SF1", "DUOX2", "DUOXA1", "APOA1",
+        "CHGA", "PCSK1N", "SCT", "SCGN", "NEUROD1", "SOX4",  
+        "FCGBP", "ZG16", "SLC26A3", "AQP8", "CEACAM7", "LGR5",
+        "RGMB", "ASCL2", "OLFM4", "PCLAF", "PCNA", 
+        "SH2D6", "LRMP", "MATK", "FYB1", "HPGDS", "MUC6", "PGC", "AQP5", "BPIFB1"),
+            "CHGA", "CHGB", "ENPP2", "SST", "PYY"),
+        epi.goblet=c("TFF3", "MUC2", "MUC5AC"),
+        epi.entero=c("FABP1", "FABP2", "ALDOB", "SLC26A2", "CA1", "CA4", "CA7", "KRT19", "KRT20"),
+        epi.stress=c("DUOX2", "DUOXA2", "CTSE", "KLK10"),
+        `epi.goblet-progen`=c("REG4"),
+        epi.stem=c("OLFM4", "KCNQ1"),
+        epi.prolif=c("MKI67", "TOP2A", "DNMT1"),
+        epi.stem_LGR5.1=c("NOTUM", "AXIN2", "ZBTB4", "MCTP1", "ASCL2", "LGR5"),
+        epi.stem_LGR5.2=c("CLDN2", "ODAM", "CCL15", "GHR"),
+        epi.4=c("TMEM63C"),
+        `epi.paneth-like`=c("REG1A", "REG1B", "REG3A", "DEFA5", "DEFA6"),
+        epi.1=c("MMP7", "KRT23", "KRT17", "KRT80"),
+        epi.6=c("DMXL2", "TUSC3"),
+        epi.2=c("TSLP", "ESPN", "ALPI", "ATP12A"),
+        epi.3=c("C3", "CISH"),
+        epi.5=c("SPARC", "CALD1")
+    ),
+    str=list(
+        SMC=c("MYL9", "MYLK", "MYH11", "ACTA2", "TAGLN"),
+        BEC=c("CDH5", "FLT1", "CLDN5"),
+        LEC=c("PECAM1", "VWF", "CD34", "CD93", "EGFL7", "KLF2", "LYVE1", "PROX1", "CCL21"),
+        fib=c("PTGIS", "SFRP1", "SFRP2", "PI16"),
+        fib_TLS=c("C3", "CLU", "LTA3", "CCL19", "CXCL13", "SPIB"),
+        IAF_MMP=c("MMP1", "MMP3", "MMP10", "MMP19", "CXCL5", "CXCL8", "SMOX", "ASRGL1"),
+        fib_ADAMDEC1=c("ADAMDEC1", "ADAM28", "BMP5", "FGFR4", "CCL11"),
+        CAF_L1CAM=c("L1CAM", "ITGB8", "CCBE1"),
+        CAF_CXCL14=c("COL4A5", "CXCL14", "F3", "PDGFRA"),
+        CAF_CTHRC1=c("CTHRC1", "FN1", "COL10A1", "FAP"),
+        CAF_COL4=c("PDGFA", "COL4", "COL5A3", "LZTS1")
+    )
+)
 ```
 
 ::: {.panel-tabset}
 
-```{r mgs-qlt, results="asis", fig.width=12, fig.height=3}
-mgs_lys <- list(
-    epi=c("entero", "endocrine"),
-    imm=c("TC", "mac", "PC", "mast"), 
-    str=c("EC", "SMC", "fib", "glia", "neutro"))
-for (. in sub) for (.. in mgs_lys[[.]]) {
-    mtx <- logcounts(lys[[.]])[mgs[[..]], ]
-    if ((n <- nrow(mtx)) > 100) mtx <- mtx[sample(n, 100), ]
-    p <- .plt_hm(lys[[.]], mtx, by=c("kid", "pid")) +
-        ggtitle(bquote(bold(.(.))~"—"~.(..))) +
+```{r mgs-hm-sel, results="asis", fig.width=15, fig.height=4}
+ps <- lapply(sub, \(.) {
+    .gs <- unique(unlist(gs[[.]]))
+    .gs <- intersect(.gs, rownames(lys[[.]]))
+    mtx <- logcounts(lys[[.]])[.gs, ]
+    .plt_hm(lys[[.]], mtx, by="kid", id=.) + 
         coord_flip(expand=FALSE) + theme(
-            axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
-    cat("#### ", .., "\n"); print(p); cat("\n\n")
-}
+            axis.text.y=element_text(size=12), 
+            axis.text.x=element_text(size=8, angle=90, hjust=1, vjust=0.5))
+})
+for (. in sub) { cat("#### ", ., "\n"); print(ps[[.]]); cat("\n\n") }
 ```
 
 :::
+
+## downstreams
 
 ### signatures
 

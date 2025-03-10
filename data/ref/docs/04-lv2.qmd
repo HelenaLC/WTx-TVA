@@ -11,9 +11,9 @@ library(ggplot2)
 library(tidytext)
 library(patchwork)
 library(BiocParallel)
-bp <- MulticoreParam(10)
+bp <- MulticoreParam(30)
 source("utils.R")
-set.seed(241127)
+set.seed(250310)
 ```
 
 ### loading
@@ -27,53 +27,62 @@ sapply(lys, ncol)
 
 ## labelling
 
-```{r include=FALSE}
-# temporarily assign to most dominant lv1 subpopulation
-lab <- lapply(sub, \(.) {
-    obj <- lys[[.]]
-    tbl <- table(obj$kid, obj$lv1)
-    new <- colnames(tbl)[apply(tbl, 1, which.max)]
-    setNames(make.unique(new), rownames(tbl))
-})
-```
-
 ```{r lab}
 imm <- c(
-    b="Bn", j="Bm", 
-    c="mast", u="neutro", 
-    e="PC_IgA1", n="PC_IgA1", 
-    i="PC_IgA2", o="PC_IgA2", 
-    r="PC_IgG", s="PC_IgG", 
-    p="PC_IgM", t="PC_IgM",
-    f="macro_TR", h="macro_TR", 
-    a="Th", d="Th", l="Tc", q="Tp",
-    k="cDC1", m="cDC1", g="cDC2_CCR7")
-setdiff(unique(lys$imm$kid), names(imm))
+    a="Th", d="Tc", f=NA,
+    b="Bn", j="Bm",
+    c="mast",  
+    g="macro1",
+    h="cDC2_CCR7",
+    k="cDC1",
+    l=NA,
+    m=NA,
+    r="macro2",
+    e="PC_IgA1", m="PC_IgA1",
+    i="PC_IgA2", n="PC_IgA2",
+    p="PC_IgG", s="PC_IgG",
+    o="PC_IgM", q="PC_IgM",
+    t="nphil")
+setdiff(unique(lys$imm$kid), names(imm)) 
 str <- c(
-    b="LEC", h="BEC", k="BEC", 
-    c="SMC", d="SMC", e="SMC",
-    a="fib_ADAMDEC1", i="fib_TLS", 
-    f="fib", m="fib", n="fib", o="fib",
-    g="CAF_CXCL14", j="CAF_L1CAM", 
-    l="CAF_COL4", p="CAF_CTHRC1", q="IAF_MMP")
+    a="fib_ADAM", 
+    b="LEC",
+    c="SMC",
+    d="fib_NR4A1",
+    e="fib_PI16",
+    f="SMC",
+    g=NA,
+    h="CAF_NOTCH3",
+    i="CAF_F3",
+    j="BEC",
+    k="fib.TLS",
+    l="BEC",
+    m=NA,
+    n="BEC",
+    o="fib_PDGFRA",
+    p="fib",
+    q="CAF_CTHRC1",
+    r="IAF_MMP")
 setdiff(unique(lys$str$kid), names(str))
 epi <- c(
-    a="epi.REF_goblet",
-    e="epi.REF_entero",
-    f="epi.REF_EE",
-    g="epi.TVA/CRC_paneth-like",
-    b="epi.TVA_stem",
-    o="epi.TVA_stem_LGR5h",
-    d="epi.TVA_stem_LGR5l",
-    n="epi.TVA_stem_LGR5l_REG",
-    c="epi.TVA1",
-    h="epi.TVA2",
-    i="epi.TVA3",
-    k="epi.TVA4",
-    p="epi.CRC_stem",
-    q="epi.CRC_stress",
-    m="epi.REF/CRC_goblet-progen",
-    j="epi.CRC", l="epi.CRC", r="epi.CRC")
+    a="epi.goblet", 
+    b="epi.MUC5AC",
+    c="epi_MSLN",
+    d=NA,
+    e="epi.EE",
+    f="epi.entero",
+    g="epi.1",
+    h="epi.2",
+    i="epi.3",
+    j="epi.paneth-like",
+    k="epi_KLK10/CLDN2",
+    l="epi.LGR5",
+    m="epi.MUC5AC",
+    n="epi.4",
+    o="epi_LEFTY1",
+    p="epi.stress",
+    q="epi_DNMT1",
+    r="epi.REG/DUOX")
 setdiff(unique(lys$epi$kid), names(epi))
 
 lab <- list(epi=epi, imm=imm, str=str)
@@ -96,23 +105,7 @@ sapply(lys, \(.) nlevels(.$lv2))
 
 ```{r plt-fqs, results="asis", fig.width=4, fig.height=2}
 for (. in names(lys)) {
-    p <- .plt_fq(lys[[.]], x="lv2", y="pid", id=., pal=.pal)
-    cat("#### ", ., "\n"); print(p); cat("\n\n")
-}
-```
-
-:::
-
-### regression
-
-::: {.panel-tabset}
-
-```{r plt-pcr, results="asis", fig.width=6, fig.height=3}
-ids <- c("sum", "run", "pid", "kid", "lv2")
-pal <- c("magenta", "gold", "cyan", "blue", "green")
-pcr <- lapply(lys, .pcr, ids)
-for (. in sub) {
-    p <- .plt_pcr(pcr[[.]]) + scale_color_manual(values=pal)
+    p <- .plt_fq(lys[[.]], x="lv2", y="sid", id=., pal=.pal)
     cat("#### ", ., "\n"); print(p); cat("\n\n")
 }
 ```
@@ -124,11 +117,89 @@ for (. in sub) {
 ::: {.panel-tabset}
 
 ```{r plt-map, results="asis", fig.width=15, fig.height=5}
-ids <- c("run", "pid", "lv2")
+ids <- c("run", "sid", "lv2")
 for (. in sub) {
     p <- .plt_dr(lys[[.]], ids) & ggtitle(.lab(., ncol(lys[[.]])))
     cat("#### ", ., "\n"); print(p); cat("\n\n")
 }
+```
+
+:::
+
+## markers
+
+```{r mgs-sel}
+gs <- list(
+    imm=list(
+        Bm=c("BCL7A", "CR2", "CD19", "CD40", "CD69", "CD79A", "CD83", "CIITA", "SELL", "IGHD"),
+        Bn=c("BANK1", "MS4A1"),
+        Ba=c("BIRC5"),
+        PC_IgA=c("MZB1", "XBP1", "IGHA1", "IGHA2"),
+        PC_IgG=c("IGHG1"), 
+        PC_IgM=c("IGHM"),
+        Th=c("CD2", "CD3D", "CD4", "ICOS", "CCR4"),
+        Tc=c("CD8A", "GZMA", "GZMK", "NKG7"),
+        Tp=c("MKI67", "TOP2A"),
+        mast=c("KIT", "IL1RL1"),
+        cDC2_CCR7=c("CCR7"),
+        cDC1=c("LAMP3", "CLEC10A", "ITGAX"),
+        nphil=c("IL1B", "S100A8", "S100A9", "MMP9"),
+        TRM=c("CD14", "CD68", "CD163", "APOE", "APOC1", "CTSD", "C1QA", "C1QB", "C1QC")
+    ),
+    epi=list(
+        epi.EE=c(
+            c("BEST4", "CA7", "OTOP2", "CTFR", "CA1", "GPT", "MUC17", "TFF1",
+        "CD55", "TM4SF1", "DUOX2", "DUOXA1", "APOA1",
+        "CHGA", "PCSK1N", "SCT", "SCGN", "NEUROD1", "SOX4",  
+        "FCGBP", "ZG16", "SLC26A3", "AQP8", "CEACAM7", "LGR5",
+        "RGMB", "ASCL2", "OLFM4", "PCLAF", "PCNA", 
+        "SH2D6", "LRMP", "MATK", "FYB1", "HPGDS", "MUC6", "PGC", "AQP5", "BPIFB1"),
+            "CHGA", "CHGB", "ENPP2", "SST", "PYY"),
+        epi.goblet=c("TFF3", "MUC2", "MUC5AC"),
+        epi.entero=c("FABP1", "FABP2", "ALDOB", "SLC26A2", "CA1", "CA4", "CA7", "KRT19", "KRT20"),
+        epi.stress=c("DUOX2", "DUOXA2", "CTSE", "KLK10"),
+        `epi.goblet-progen`=c("REG4"),
+        epi.stem=c("OLFM4", "KCNQ1"),
+        epi.prolif=c("MKI67", "TOP2A", "DNMT1"),
+        epi.stem_LGR5.1=c("NOTUM", "AXIN2", "ZBTB4", "MCTP1", "ASCL2", "LGR5"),
+        epi.stem_LGR5.2=c("CLDN2", "ODAM", "CCL15", "GHR"),
+        epi.4=c("TMEM63C"),
+        `epi.paneth-like`=c("REG1A", "REG1B", "REG3A", "DEFA5", "DEFA6"),
+        epi.1=c("MMP7", "KRT23", "KRT17", "KRT80"),
+        epi.6=c("DMXL2", "TUSC3"),
+        epi.2=c("TSLP", "ESPN", "ALPI", "ATP12A"),
+        epi.3=c("C3", "CISH"),
+        epi.5=c("SPARC", "CALD1")
+    ),
+    str=list(
+        SMC=c("MYL9", "MYLK", "MYH11", "ACTA2", "TAGLN"),
+        BEC=c("CDH5", "FLT1", "CLDN5"),
+        LEC=c("PECAM1", "VWF", "CD34", "CD93", "EGFL7", "KLF2", "LYVE1", "PROX1", "CCL21"),
+        fib=c("PTGIS", "SFRP1", "SFRP2", "PI16"),
+        fib_TLS=c("C3", "CLU", "LTA3", "CCL19", "CXCL13", "SPIB"),
+        IAF_MMP=c("MMP1", "MMP3", "MMP10", "MMP19", "CXCL5", "CXCL8", "SMOX", "ASRGL1"),
+        fib_ADAMDEC1=c("ADAMDEC1", "ADAM28", "BMP5", "FGFR4", "CCL11"),
+        CAF_L1CAM=c("L1CAM", "ITGB8", "CCBE1"),
+        CAF_CXCL14=c("COL4A5", "CXCL14", "F3", "PDGFRA"),
+        CAF_CTHRC1=c("CTHRC1", "FN1", "COL10A1", "FAP"),
+        CAF_COL4=c("PDGFA", "COL4", "COL5A3", "LZTS1")
+    )
+)
+```
+
+::: {.panel-tabset}
+
+```{r plt-mgs-sel, results="asis", fig.width=15, fig.height=4}
+ps <- lapply(sub, \(.) {
+    .gs <- unique(unlist(gs[[.]]))
+    .gs <- intersect(.gs, rownames(lys[[.]]))
+    mtx <- logcounts(lys[[.]])[.gs, ]
+    .plt_hm(lys[[.]], mtx, by="lv2", id=.) + 
+        coord_flip(expand=FALSE) + theme(
+            axis.text.y=element_text(size=12), 
+            axis.text.x=element_text(size=8, angle=90, hjust=1, vjust=0.5))
+})
+for (. in sub) { cat("### ", ., "\n"); print(ps[[.]]); cat("\n\n") }
 ```
 
 :::
@@ -139,11 +210,11 @@ for (. in sub) {
 
 ```{r mgs}
 mgs <- lapply(lys, \(sub) findMarkers(
-    sub, groups=sub$lv2, block=sub$pid,
-    add.summary=TRUE, BPPARAM=bp))
+    sub, groups=sub$lv2, block=sub$pid, 
+    direction="up", add.summary=TRUE, BPPARAM=bp))
 ```
 
-```{r sel}
+```{r}
 sel <- lapply(sub, \(.) {
     ns <- sapply(mgs[[.]], \(df) {
         gs <- rownames(lys[[.]])
@@ -156,8 +227,8 @@ sel <- lapply(sel, \(.) unique(unlist(.)))
 sapply(sel, length)
 ```
 
-```{r fig.width=4, fig.height=2.5}
-UpSetR::upset(UpSetR::fromList(sel))
+```{r plt-upset, fig.width=4, fig.height=2.5}
+UpSetR::upset(mtx <- UpSetR::fromList(sel))
 ```
 
 ### aggregation
@@ -179,11 +250,11 @@ pbs <- lapply(lys, \(sce) {
 
 ```{r save-data}
 for (. in sub) {
-    rds <- sprintf("../outs/qbs-lv2,%s.rds", .)
-    #if (!file.exists(rds)) {
+    rds <- sprintf("../outs/pbs-lv2,%s.rds", .)
+    if (!file.exists(rds)) {
         mtx <- assay(pbs[[.]])[sel[[.]], ]
         saveRDS(mtx, rds)
-    #}
+    }
 }
 ```
 

@@ -24,4 +24,4 @@ table(rowAlls(is.na(roi)))
 apply(roi, 2, table)
 
 # saving
-saveRDS(sce, args[[3]])
+base::saveRDS(sce, args[[3]])

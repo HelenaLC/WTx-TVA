@@ -1,6 +1,6 @@
 # pal ----
 .pal_roi <- c(REF="seagreen", TVA="royalblue", CRC="tomato")
-.pal_sub <- c(imm="cyan2", epi="gold2", str="magenta2")
+.pal_sub <- c(epi="gold2", imm="cyan2", str="magenta2")
 .pal_kid <- unname(pals::trubetskoy())
 .pal <- c(
     "#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72",
@@ -403,7 +403,6 @@
     if (is(z, "SingleCellExperiment"))
         z <- data.frame(colData(z))
     ns <- table(z[[x]], z[[y]])
-    ys <- sort(unique(z[[y]]))
     df <- as.data.frame(ns)
     i <- match(df[[1]], z[[x]])
     j <- setdiff(names(z), c(x, y))
@@ -571,7 +570,7 @@
 }
 
 # spatial plot
-.plt_xy <- \(x, k, id="", s=NULL, split=TRUE) {
+.plt_xy <- \(x, k, id="", s=NULL, split=TRUE, na=FALSE) {
     # dependencies
     library(ggplot2)
     library(ggrastr)
@@ -594,10 +593,10 @@
     pt <- if (is.null(s)) min(dx, dy)/100/4 else s
     # plotting
     if (is.factor(df$k)) {
-        fd <- df[!is.na(df$k), ]
+        fd <- if (na) df else df[!is.na(df$k), ]
         p0 <- ggplot(fd, aes(x, y, col=k)) + .thm_xy_d(pt) +
             scale_color_manual(NULL, drop=FALSE, values=pal) +
-            ggtitle(.lab(id, nrow(fd)))
+            ggtitle(.lab(id, sum(!is.na(fd$k))))
         if (!split) return(p0)
         ps <- if (split) lapply(c(ks, NA), \(k) {
             df$. <- if (is.na(k)) is.na(df$k) else grepl(sprintf("^%s$", k), df$k)
@@ -779,13 +778,20 @@
     return(xy)
 }
 
-# subset 'SingleCellExperiment' by ROI's xy-coordinates
-.subset_shape <- \(se, df, xy="Center._global_px") {
+# subset 'SingleCellExperiment' by ROI's xy-coordinates;
+# in case an ROI spans multiple disconnected selections
+# (according to column 'id'), consider each separately
+.subset_shape <- \(se, df, xy="Center._global_px", id="shape_id") {
+    if (is.null(df[[id]])) df[[id]] <- 0
     require(SummarizedExperiment, quiet=TRUE)
     xy <- grep(xy, names(colData(se)))
-    se[, sp::point.in.polygon(
-        se[[xy[1]]], se[[xy[2]]], 
-        df$x_global_px, df$y_global_px) == 1]
+    cs <- by(df, df[[id]], \(fd) {
+        sp::point.in.polygon(
+            se[[xy[1]]], se[[xy[2]]], 
+            fd$x_global_px, fd$y_global_px) == 1
+    })
+    cs <- do.call(cbind, as.list(cs))
+    se[, rowAnys(cs)]
 }
 
 # thm ----

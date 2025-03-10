@@ -25,9 +25,9 @@ df <- mapply(
         roi <- readRDS(roi); assays(roi) <- list()
         pol <- read_parquet(pol, as_data_frame=FALSE)
         kid <- readRDS(ist)$clust
-        # get regions, except lymphatic invasions
+        # get regions corresponding to transition crypts
         ids <- sort(setdiff(unique(roi$roi), NA))
-        ids <- grep("LI$", ids, invert=TRUE, value=TRUE)
+        ids <- grep("(BV|LI)$", ids, invert=TRUE, value=TRUE)
         df <- lapply(ids, \(id) {
             roj <- roi[, grep(id, roi$roi)] # subset region
             ch <- concaveman(as.matrix(.xy(roj))) # concave hull

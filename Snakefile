@@ -80,70 +80,64 @@ for x,y,z in zip(foo.x, foo.y, foo.z):
 
 plt = []
 
-plt__one = "plts/{out},{plt},{x}.pdf"
-plt__one_ = "plts/{out},{plt},{{x}}.pdf"
+# one by nan
+pdf = "plts/{out},{plt},{x}.pdf"
 foo = glob_wildcards("code/10-plt__{by}-{out},{plt}.R")
 for b,o,p in zip(foo.by, foo.out, foo.plt):
     xs = {"sid": SID, "sub": SUB}
     if b in xs.keys():
-        plt += expand(plt__one, out=o, plt=p, x=xs[b])
+        plt += expand(pdf, out=o, plt=p, x=xs[b])
 
-plt__all = "plts/{out},{plt}.pdf"
-foo = glob_wildcards("code/10-plt__all_{z}-{x},{y}.R")
-for x,y,z in zip(foo.x, foo.y, foo.z):
-	if z in ["sid", "sub"]:
-	    plt += expand(plt__all, out=x, plt=y)
+# all by nan
+pdf = "plts/{out},{plt}.pdf"
+foo = "code/10-plt__{x}-{{a}},{{p}}.R"
+for x in ["all_sid", "all_sub", "all_sid_all_sub"]:
+    bar = glob_wildcards(expand(foo, x=x)[0])
+    for a,p in zip(bar.a, bar.p):
+        plt += expand(pdf, out=a, plt=p)
 
-plt__sid__sid_ = "plts/{out1},{out2},{plt},{{sid}}.pdf"
-foo = glob_wildcards("code/10-plt__sid__sid-{x},{y},{z}.R")
-for x,y,z in zip(foo.x, foo.y, foo.z):
-	plt += expand(plt__sid__sid_, out1=x, out2=y, plt=z)
+# two all by nan
+pdf = "plts/{out1},{out2},{plt}.pdf"
+foo = "code/10-plt__{x}__{y}-{{a}},{{b}},{{p}}.R"
+for xy in [
+	["all_sid", "all_sid"],
+	["all_sid", "all_sid_all_sub"]]:
+    bar = glob_wildcards(expand(foo, x=xy[0], y=xy[1])[0])
+    for a,b,p in zip(bar.a, bar.b, bar.p):
+        plt += expand(pdf, out1=a, out2=b, plt=p)
 
-plt__all_sid__all_sid = "plts/{out1},{out2},{plt}.pdf"
-foo = glob_wildcards("code/10-plt__all_sid__all_sid-{x},{y},{z}.R")
-for x,y,z in zip(foo.x, foo.y, foo.z):
-	plt += expand(plt__all_sid__all_sid, out1=x, out2=y, plt=z)
+# two by sid
+pdf = "plts/{out1},{out2},{plt},{{sid}}.pdf"
+foo = "code/10-plt__{x}__{y}-{{a}},{{b}},{{p}}.R"
+for xy in [
+    ["sid", "sid"],
+    ["sid", "one_sid_all_sub"],
+    ["one_sid_all_sub", "one_sid_all_sub"]]:
+    bar = glob_wildcards(expand(foo, x=xy[0], y=xy[1])[0])
+    for a,b,p in zip(bar.a, bar.b, bar.p):
+        plt += expand(pdf, out1=a, out2=b, plt=p)
 
-plt__sid_sub_ = "plts/{out1},{plt},{{sid}},{{sub}}.pdf"
-foo = glob_wildcards("code/10-plt__sid_sub-{x},{y}.R")
-for x,y in zip(foo.x, foo.y):
-	plt += expand(expand(plt__sid_sub_, out1=x, plt=y), sid=SID, sub="epi")
-
-plt__sid_sub__sid_sub_ = "plts/{out1},{out2},{plt},{{sid}},{{sub}}.pdf"
-foo = glob_wildcards("code/10-plt__sid_sub__sid_sub-{x},{y},{z}.R")
-for x,y,z in zip(foo.x, foo.y, foo.z):
-	plt += expand(plt__sid_sub__sid_sub_, out1=x, out2=y, plt=z)
-
-plt__sid__one_sid_all_sub_ = "plts/{out1},{out2},{plt},{{sid}}.pdf"
-foo = glob_wildcards("code/10-plt__sid__one_sid_all_sub-{x},{y},{z}.R")
-for x,y,z in zip(foo.x, foo.y, foo.z):
-	plt += expand(plt__sid__one_sid_all_sub_, out1=x, out2=y, plt=z)
-
-plt__all_sid_all_sub = "plts/{out1},{plt}.pdf"
-foo = glob_wildcards("code/10-plt__all_sid_all_sub-{x},{y}.R")
-for x,y in zip(foo.x, foo.y):
-	plt += expand(plt__all_sid_all_sub, out1=x, plt=y)
-
-plt__all_sid_one_sub_ = "plts/{out1},{plt},{{sub}}.pdf"
+# one by sub
+pdf = "plts/{out1},{plt},{{sub}}.pdf"
 foo = glob_wildcards("code/10-plt__all_sid_one_sub-{x},{y}.R")
 for x,y in zip(foo.x, foo.y):
-	plt += expand(expand(plt__all_sid_one_sub_, out1=x, plt=y), sub=SUB)
+	plt += expand(expand(pdf, out1=x, plt=y), sub=SUB)
 
-plt__all_sid__all_sid_all_sub = "plts/{out1},{out2},{plt}.pdf"
-foo = glob_wildcards("code/10-plt__all_sid__all_sid_all_sub-{x},{y},{z}.R")
+# one by sid-sub
+pdf = "plts/{out1},{plt},{{sid}},{{sub}}.pdf"
+foo = glob_wildcards("code/10-plt__sid_sub-{x},{y}.R")
+for x,y in zip(foo.x, foo.y):
+	plt += expand(expand(pdf, out1=x, plt=y), sid=SID, sub="epi")
+
+# two by sid-sub
+pdf = "plts/{out1},{out2},{plt},{{sid}},{{sub}}.pdf"
+foo = glob_wildcards("code/10-plt__sid_sub__sid_sub-{x},{y},{z}.R")
 for x,y,z in zip(foo.x, foo.y, foo.z):
-	plt += expand(plt__all_sid__all_sid_all_sub, out1=x, out2=y, plt=z)
+	plt += expand(pdf, out1=x, out2=y, plt=z)
 
-pat = re.compile(r'^.*trj.*$')
-#print([p for p in plt if pat.match(p)])
-
-# restrict certain plots to epithelia
-
-# pat = re.compile(r'^.*trj.*$')
-# qlt = [p for p in plt if pat.match(p)]
-# plt += expand(qlt, sid=SID, sub="epi")
-# pat = re.compile(r'^((?!trj.*{).)*$')
-# plt = [p for p in plt if pat.match(p)]
+#pat = re.compile(r'^((?!trj).)*$')
+#plt = [p for p in plt if pat.match(p)]
+#qlt = [q for q in qlt if pat.match(q)]
 
 pat = re.compile(r'^.*kst.*$')
 qlt = [p for p in plt if pat.match(p)]
@@ -166,10 +160,6 @@ qlt_tcs_p = "plts/tcs,{x},{p}.pdf"
 foo = glob_wildcards(qlt_tcs_r)
 for x,p in zip(foo.x, foo.p):
     qlt += expand(qlt_tcs_p, x=x, p=p)
-
-pat = re.compile(r'^((?!trj).)*$')
-#plt = [p for p in plt if pat.match(p)]
-#qlt = [q for q in qlt if pat.match(q)]
 
 rule all:
     input:
@@ -537,7 +527,8 @@ for by in [
 pat = "plt__{by1}__{by2}-{{out1}},{{out2}},{{plt}}"
 for by in [
     ["sid","sid"],
-    ["sid","one_sid_all_sub"]]:
+    ["sid","one_sid_all_sub"],
+    ["one_sid_all_sub","one_sid_all_sub"]]:
     rule:
         name:   "plt__%s__%s" % (by[0], by[1])
         input:  expand("code/10-"+pat+".R", by1=by[0], by2=by[1]),

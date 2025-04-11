@@ -455,23 +455,6 @@ rule plt_raw:
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''
 
-a_sid = "outs/{out1}-{sid}.rds"
-b_sid = "outs/{out2}-{sid}.rds"
-a_sub = "outs/{out1}-{sub}.rds"
-b_sub = "outs/{out2}-{sub}.rds"
-a_sid_sub = "outs/{out1}-{sid},{sub}.rds"
-b_sid_sub = "outs/{out2}-{sid},{sub}.rds"
-a_all_sub = expand("outs/{{out1}}-{sub}.rds", sub=SUB)
-b_all_sub = expand("outs/{{out2}}-{sub}.rds", sub=SUB)
-a_all_sid = expand("outs/{{out1}}-{sid}.rds", sid=SID)
-b_all_sid = expand("outs/{{out2}}-{sid}.rds", sid=SID)
-a_all_sid_one_sub = expand("outs/{{out1}}-{sid},{{sub}}.rds", sid=SID)
-b_all_sid_one_sub = expand("outs/{{out2}}-{sid},{{sub}}.rds", sid=SID)
-a_one_sid_all_sub = expand("outs/{{out1}}-{{sid}},{sub}.rds", sub=SUB)
-b_one_sid_all_sub = expand("outs/{{out2}}-{{sid}},{sub}.rds", sub=SUB)
-a_all_sid_all_sub = expand("outs/{{out1}}-{sid},{sub}.rds", sid=SID, sub=SUB)
-b_all_sid_all_sub = expand("outs/{{out2}}-{sid},{sub}.rds", sid=SID, sub=SUB)	
-
 def out(by, n=None):
     o = "out" if n is None else "out"+str(n)
     d = {

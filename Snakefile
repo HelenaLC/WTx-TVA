@@ -67,22 +67,14 @@ pbs_kst = "outs/pbs_kst.rds"
 mgs = "outs/mgs-{sub}.rds"
 
 # plotting
-plt_raw_all = []
-plt_any_all = []
-plt_raw = "plts/raw/raw,{out2}-{plt},{sid}.pdf"
-plt_raw_ = "plts/raw/raw,{out2}-{plt},{{sid}}.pdf"
-plt_any = "plts/any/{out1},{out2}-{plt},{sid}.pdf"
-plt_any_ = "plts/any/{out1},{out2}-{plt},{{sid}}.pdf"
-foo = glob_wildcards("code/10-plt_{x},{y}-{z}.R")
-for x,y,z in zip(foo.x, foo.y, foo.z):
-	if x == "raw":
-		ps = expand(plt_raw_, out1=x, out2=y, plt=z)
-		plt_raw_all += expand(ps, sid=SID)
-	elif x != "all":
-		ps = expand(plt_any_, out1=x, out2=y, plt=z)
-		plt_any_all += expand(ps, sid=SID)
-
 plt = []
+
+# raw
+plt_raw = "plts/raw,{out2}-{plt},{sid}.pdf"
+plt_raw_ = "plts/raw,{out2}-{plt},{{sid}}.pdf"
+bar = glob_wildcards("code/10-plt_raw,{y}-{z}.R")
+for y,z in zip(bar.y, bar.z):
+    plt += expand(plt_raw_, out2=y, plt=z)
 
 # one by nan
 pdf = "plts/{out},{plt},{ids}.pdf"

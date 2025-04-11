@@ -48,24 +48,23 @@ ps <- lapply(group_split(df, sub), \(fd) {
     nc <- format(sum(fd$n), big.mark=",")
     p1 <- ggplot(fd, aes(roi, p, fill=kid)) + 
         geom_col(width=1, key_glyph="point") +
-        scale_y_continuous(
-            "proportion of cells", n.breaks=6, 
-            labels=scales::label_percent()) +
         scale_fill_manual(sub, values=.pal_kid) +
         coord_cartesian(expand=FALSE) +
+        labs(y="frequency") +
         gd + theme_bw(6) + theme(
             plot.margin=margin(),
-            axis.title.x=element_blank(),
-            axis.ticks.x=element_blank()) +
+            axis.ticks=element_blank(),
+            axis.text.y=element_blank(),
+            axis.title.x=element_blank()) +
         if (sub != "str") theme(axis.text=element_blank()) else
         theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5))
     p2 <- ggplot(distinct(fd, roi, .keep_all=TRUE), aes(roi)) + 
         geom_tile(key_glyph="point", col="white", aes(y=0, fill=typ)) + 
-        scale_fill_manual(values=c("limegreen", "royalblue", "tomato")) +
+        scale_fill_manual(values=.pal_roi) +
         ggtitle(bquote(bold(.(sub))~"(N ="~.(nc)*")")) +
         gd + new_scale_fill() + gd +
         geom_tile(key_glyph="point", col="white", aes(y=1, fill=sid)) + 
-        scale_fill_manual(values=unname(pals::polychrome(8))) +
+        scale_fill_manual(values=.pal_sid) +
         coord_equal(2/3, expand=FALSE) + theme_void(6) + 
         theme(plot.title=element_text(hjust=0.5)) +
         if (sub != "epi") theme(legend.position="none")
@@ -78,7 +77,7 @@ ps <- lapply(group_split(df, sub), \(fd) {
 gg <- wrap_plots(ps, ncol=1) +
     plot_layout(guides="collect") & 
     # keep order fixed across subsets
-    ps[[1]][[2]]$scales$scales[[3]] &
+    tail(ps[[1]][[2]]$scales$scales, 1) &
     theme(
         plot.background=element_blank(),
         panel.background=element_blank(),

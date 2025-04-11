@@ -31,6 +31,7 @@ ps <- lapply(sid, \(sid) {
     pol <- read_parquet(args[[3]][sid], as_data_frame=FALSE)
     # get regions
     ids <- sort(setdiff(unique(roi$roi), NA))
+    ids <- ids[!grepl("REF$", ids)]
     lapply(ids, \(id) {
         roj <- roi[, grep(id, roi$roi)] # subset region
         ch <- concaveman(as.matrix(.xy(roj))) # concave hull

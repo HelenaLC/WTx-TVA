@@ -28,7 +28,7 @@ ps <- lapply(c(TRUE, FALSE), \(.) {
     }
     ns <- as.data.frame(table(df[[y]]))
     ns <- setNames(ns, c(y, "n"))
-    gg <- .plt_fq(df, y, f, id=wcs$x, h=TRUE) +
+    gg <- .plt_fq(df, y, f, id="epi", h=TRUE) +
         geom_text(
             aes(.data[[y]], 1.2, label=format(n, big.mark=",")), 
             ns, inherit.aes=FALSE, hjust=1, size=1.5) +
@@ -46,8 +46,8 @@ gg <- wrap_plots(ps, ncol=1,
     guides="collect") & theme(
         panel.grid=element_blank(),
         axis.title=element_blank(),
-        axis.text.x=element_blank(),
         axis.text.y=element_text(hjust=1),
+        axis.text.x=element_blank(),
         legend.spacing=unit(0, "lines"))
 n <- length(unique(df$sid))+length(unique(df$kid))
-ggsave(args[[2]], gg, units="cm", width=9, height=n/4)
+ggsave(args[[2]], gg, units="cm", width=10, height=n/4)

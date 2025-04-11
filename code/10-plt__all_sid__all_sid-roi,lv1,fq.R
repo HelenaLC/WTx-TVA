@@ -38,12 +38,12 @@ ns <- df |>
 # plotting
 gg <- ggplot(df, aes(n, roi, fill=k)) + 
     facet_grid(rows="typ", scales="free_y", space="free_y") +
-    scale_fill_manual(NULL, values=c("gold", "cyan", "magenta")) +
     guides(fill=guide_legend(override.aes=list(shape=21, stroke=0, size=2))) +
     geom_col(width=1, alpha=2/3, col="white", linewidth=0.1, position="fill") +
     geom_text(size=1.2, hjust=1, aes(0.98, roi, label=m), ns, inherit.aes=FALSE) +
     scale_x_continuous(n.breaks=6, labels=scales::percent_format()) +
     labs(x="proportion of cells", y="pathological region") +
+    scale_fill_manual(NULL, values=.pal_sub) +
     coord_cartesian(expand=FALSE) +
     theme_bw(6) + theme(
         legend.position="none",

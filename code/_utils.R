@@ -1,7 +1,20 @@
 # pal ----
 .pal_roi <- c(REF="seagreen", TVA="royalblue", CRC="tomato")
+.pal_roj <- c(
+    "REF"="seagreen",
+    "TVA"="royalblue",
+    "TVA1"="dodgerblue",
+    "TVA2"="royalblue",
+    "TVA3"="slateblue",
+    "CRC"="tomato",
+    "CRC1"="tomato",
+    "CRC2"="indianred")
 .pal_sub <- c(epi="gold2", imm="cyan2", str="magenta2")
 .pal_kid <- unname(pals::trubetskoy())
+.pal_ctx <- unname(pals::cols25())
+.pal_sid <- c(
+    "#FB8072", "#7BAFDE", "#BEAED4", "#FDB462", 
+    "#E78AC3", "#B2DF8A", "#8DD3C7", "#d4b7b7")
 .pal <- c(
     "#DC050C", "#FB8072", "#1965B0", "#7BAFDE", "#882E72",
     "#B17BA6", "#FF7F00", "#FDB462", "#E7298A", "#E78AC3",
@@ -427,15 +440,15 @@
         geom_col(
             position="fill", col="white", alpha=a,
             linewidth=0.1, width=1, key_glyph="point") +
-        scale_fill_manual(NULL, values=.pal_kid) +
-        labs(x=x, y=NULL) +
+        scale_fill_manual(values=.pal_kid) +
+        labs(x=x, y="frequency") +
         ggtitle(.lab(id, nrow(z))) +
         scale_x_discrete(limits=xo) +
-        scale_y_continuous(n.breaks=2) +
         .thm_fig_d("minimal", "f") + 
         aes + theme(
+            panel.grid=element_blank(),
             axis.ticks=element_blank(),
-            panel.grid=element_line()) 
+            axis.text.y=element_blank())
 }
 
 # gene x cluster heatmaps including look-up, joint & split markers
@@ -638,10 +651,10 @@
         .thm_xy_d(pt)
     ps <- lapply(colnames(y), \(.) {
         ggplot(df, aes(x, y, col=.q(.data[[.]]))) + 
-            .thm_xy_c(pt) +
             scale_color_gradientn(
-                paste0("q-scaled\n", ., " value"), 
-                n.breaks=6, colors=pals::jet()) 
+                colors=pals::jet(), n.breaks=6,
+                paste0("q-scaled\n", ., " value")) +
+            ggtitle(.lab(id, nrow(df))) + .thm_xy_c(pt)
     })
     c(list(p0), ps)
 }
@@ -847,28 +860,11 @@ suppressPackageStartupMessages({
     strip.background=element_blank(),
     legend.key.size=unit(0.5, "lines"))
 
-.theme_b <- .theme_w + theme(
-    legend.key=element_rect(fill="black"),
-    strip.text=element_text(color="white"),
-    plot.title=element_text(color="white"),
-    legend.text=element_text(color="white"),
-    legend.title=element_text(color="white"),
-    plot.background=element_rect(fill="black", color="black"),
-    panel.background=element_rect(fill="white", color="black"),
-    legend.background=element_rect(fill="black", color="black"))
-  
 .theme_white <- 
     theme_linedraw(6) + .theme_w + theme(
         strip.text=element_text(color="black"))
 
-.theme_black <- 
-    theme_linedraw(6) + .theme_b + theme(
-        axis.text=element_text(color="white"),
-        axis.ticks=element_line(color="white"),
-        axis.title=element_text(color="white"))
-
 .theme_white_void <- theme_void(6) + .theme_w
-.theme_black_void <- theme_void(6) + .theme_b
 
 .xo <- \(.) rownames(.)[hclust(dist(.))$order]
 .yo <- \(.) colnames(.)[hclust(dist(t(.)))$order]

@@ -1,3 +1,10 @@
+# args <- list(
+#     list.files("outs", "fil-", full.names=TRUE),
+#     list.files("outs", "roi-", full.names=TRUE),
+#     list.files("outs", "pol-", full.names=TRUE),
+#     list.files("outs", "trj-", full.names=TRUE),
+#     "plts/tcs,trj.xy.pdf")
+
 # dependencies
 suppressPackageStartupMessages({
     library(sf)
@@ -23,9 +30,9 @@ ps <- lapply(sid, \(sid) {
     sce <- readRDS(args[[1]][sid]); assays(sce) <- list()
     roi <- readRDS(args[[2]][sid]); assays(roi) <- list()
     pol <- read_parquet(args[[3]][sid], as_data_frame=FALSE)
-    ist <- readRDS(args[[4]][sid])$clust
-    idx <- match(colnames(sce), names(ist))
-    sce$ist <- factor(ist[idx])
+    trj <- readRDS(args[[4]][sid])
+    t <- trj[[grep("time", names(colData(trj)))]]
+    sce$t <- .q(t[match(colnames(sce), colnames(trj))])
     # get regions
     ids <- sort(setdiff(unique(roi$roi), NA))
     ids <- ids[!grepl("REF$", ids)]
@@ -38,10 +45,14 @@ ps <- lapply(sid, \(sid) {
         cs <- point.in.polygon(xy[, 1], xy[, 2], yx[, 1], yx[, 2])
         tmp <- sce[, colnames(sce)[cs != 0]]
         # plotting
-        .plt_ps(pol, tmp, "ist", id=id, lw=0.05, a=2/3) +
-            theme(legend.position="none") +
+        .plt_ps(pol, tmp, "t", id=id, lw=0.05, a=2/3) +
+            .thm_fig("void") + theme(legend.position="none") +
             geom_polygon(fill=NA, col="black", linewidth=0.2,
-                aes(V1, V2), data.frame(ch), inherit.aes=FALSE)
+                aes(V1, V2), data.frame(ch), inherit.aes=FALSE) +
+            scale_fill_gradientn(
+                limits=c(0, 1), 
+                na.value="grey",
+                colors=pals::jet())
     })
 }) |> Reduce(f=base::c)
 

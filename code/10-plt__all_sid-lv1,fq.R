@@ -11,7 +11,6 @@ ist <- lapply(args[[1]], readRDS)
 
 # wrangling
 sub <- c("epi", "imm", "str")
-pal <- c("gold", "cyan", "magenta")
 df <- mapply(
     kid=lapply(ist, \(lys) lys$clust), SIMPLIFY=FALSE,
     sid=gsub("lv1-(.*)\\.rds", "\\1", basename(args[[1]])),
@@ -36,10 +35,10 @@ p1 <- ggplot(fd, aes(n, sid)) +
         panel.grid=element_blank(),
         axis.title.y=element_blank())
 p2 <- ggplot(df, aes(p, sid, fill=kid)) +
-    guides(fill=guide_legend(override.aes=list(shape=21, stroke=0, size=2))) +
-    geom_col(col="white", linewidth=0.1, width=1, key_glyph="point") +
     scale_x_continuous("proportion of cells", n.breaks=6, labels=percent_format()) +
-    scale_fill_manual(NULL, breaks=sub, values=pal) +
+    geom_col(col="white", linewidth=0.1, width=1, alpha=2/3, key_glyph="point") +
+    guides(fill=guide_legend(override.aes=list(shape=21, stroke=0, size=2))) +
+    scale_fill_manual(NULL, breaks=sub, values=.pal_sub) +
     coord_cartesian(expand=FALSE) +
     theme_bw(6) + theme(
         aspect.ratio=b <- 2/3,

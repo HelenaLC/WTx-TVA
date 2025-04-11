@@ -7,15 +7,8 @@ suppressPackageStartupMessages({
 })
 
 # loading
-# args <- list(
-#     c("outs/fil-222.rds", "outs/fil-232.rds"),
-#     c(list.files("outs", "jst.*222", full.names=TRUE),
-#     list.files("outs", "jst.*232", full.names=TRUE)))
 sce <- lapply(args[[1]], readRDS)
 ist <- lapply(args[[2]], readRDS)
-
-# sce[[1]]@assays@data$counts@seed@seed@filepath <- "outs/raw-222/assays.h5"
-# sce[[2]]@assays@data$counts@seed@seed@filepath <- "outs/raw-232/assays.h5"
 
 # wrangling
 .sid <- \(.) gsub(".*([0-9]{3}).*", "\\1", .)
@@ -48,6 +41,7 @@ df <- mapply(x=sce, y=jst, \(x, y) {
 df[is.na(df)] <- 0
 
 # clustering
+set.seed(250321)
 fd <- select(df, where(is.numeric))
 km <- kmeans(fd, centers=nk <- 15)$cluster
 df$ctx <- factor(km, labels=paste0("N", seq_len(nk)))

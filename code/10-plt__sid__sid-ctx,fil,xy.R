@@ -3,9 +3,9 @@ df <- readRDS(args[[1]])
 sce <- readRDS(args[[2]])
 
 # plotting
-fd <- df[df$sid == wcs$sid, ]
-ctx <- setNames(fd$ctx, fd$cid)
-gg <- .plt_xy(sce, ctx, wcs$sid, split=FALSE)
+ctx <- setNames(df$ctx, df$cid)
+gg <- .plt_xy(sce, ctx, wcs$sid, split=FALSE) +
+    scale_color_manual("niche", values=.pal_ctx)
 
 # saving
 df <- gg$data; dx <- diff(range(df$x)); dy <- diff(range(df$y))

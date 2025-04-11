@@ -1,7 +1,6 @@
 # WTx-CosMx SMI on TVA/CRC
-
-import re
 import pandas as pd
+import re
 
 ex = "meta/exclude.rds" # barcodes overlapping with CARD8 barcode in 1st run
 md = "data/raw/metadata.txt" # slide metadata (including FOV-to-section mapping)
@@ -18,17 +17,7 @@ SID = sorted(set(MD["sid"]))
 SID = [x for x in SID if x != "241"]
 SUB = ["epi", "imm", "str"]
 
-# targets
-raw = "outs/raw-{sid}"
-fil = "outs/fil-{sid}.rds"
-clu = "outs/clu-{sid}.rds"
-pro = "outs/pro-{sid}.rds"
-pol = "outs/pol-{sid}.parquet"
-roi = "outs/roi-{sid}.rds"
-ccc = "outs/ccc-{sid}.rds"
-sig = "outs/sig-{sid}.rds"
-#pro = "outs/pro-{sid}.rds"
-
+# regions of interest
 ROI = {}
 rmv = ["110_ROI4_RC", "120_ROI7_RC", "120_ROI8_RC", 
     "120_ROI9_RC", "221_ROI1_RT2", "231_ROI11_TC"]
@@ -44,16 +33,31 @@ for sid in SID+["241"]:
 		ROI[sid] = {}
 	ROI[sid] = foo
 
+# snPATHO-seq reference profiles
 pbs_lv1 = "data/ref/outs/pbs-lv1.rds"
 pbs_lv2 = "data/ref/outs/pbs-lv2,{sub}.rds"
 
+# targets ==========================================
+
+# processing
+raw = "outs/raw-{sid}"
+fil = "outs/fil-{sid}.rds"
+roi = "outs/roi-{sid}.rds"
+pol = "outs/pol-{sid}.parquet"
+# downstream
+pro = "outs/pro-{sid}.rds"
+clu = "outs/clu-{sid}.rds"
+sig = "outs/sig-{sid}.rds"
+ccc = "outs/ccc-{sid}.rds"
+# clustering
 ist = "outs/ist-{sid}.rds"
 lv1 = "outs/lv1-{sid}.rds"
 pbs = "outs/pbs.rds"
-
+# subclustering
 sub = "outs/sub-{sid},{sub}.rds"
 jst = "outs/jst-{sid},{sub}.rds"
 lv2 = "outs/lv2-{sid},{sub}.rds"
+# epithelia
 rep = "outs/rep-{sid}.rds"
 trj = "outs/trj-{sid}.rds"
 kst = "outs/kst-{sid}.rds"
@@ -81,12 +85,13 @@ for x,y,z in zip(foo.x, foo.y, foo.z):
 plt = []
 
 # one by nan
-pdf = "plts/{out},{plt},{x}.pdf"
-foo = glob_wildcards("code/10-plt__{by}-{out},{plt}.R")
-for b,o,p in zip(foo.by, foo.out, foo.plt):
-    xs = {"sid": SID, "sub": SUB}
-    if b in xs.keys():
-        plt += expand(pdf, out=o, plt=p, x=xs[b])
+pdf = "plts/{out},{plt},{ids}.pdf"
+foo = "code/10-plt__{x}-{{a}},{{p}}.R"
+for x in ["sid", "sub"]:
+    i = {"sid": SID, "sub": SUB}[x]
+    bar = glob_wildcards(expand(foo, x=x)[0])
+    for a,p in zip(bar.a, bar.p):
+        plt += expand(pdf, out=a, plt=p, ids=i)
 
 # all by nan
 pdf = "plts/{out},{plt}.pdf"

@@ -10,20 +10,20 @@ suppressPackageStartupMessages({
 # setup
 th <- as.integer(args$ths)
 bp <- MulticoreParam(th)
-set.seed(250408)
+set.seed(250416)
 
 # loading
 sce <- readRDS(args[[1]])
 
 # reduction
 pcs <- calculatePCA(
-    assay(sce), ncomponents=30,
+    assay(sce), ncomponents=20,
     BSPARAM=RandomParam(), BPPARAM=bp)
 reducedDim(sce, "PCA") <- pcs
 
 # clustering
 g <- buildSNNGraph(sce, use.dimred="PCA", type="jaccard", k=20, BPPARAM=bp)
-k <- cluster_leiden(g, objective_function="modularity", resolution=0.8)
+k <- cluster_leiden(g, objective_function="modularity", resolution=0.5)
 table(sce$clu <- factor(k <- k$membership, seq_along(unique(k))))
 
 # saving

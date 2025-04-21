@@ -13,8 +13,8 @@ for i in range(len(MD)):
 	did = MD["did"][i]
 	if did not in DID:
 		DID += [did]
-SID = sorted(set(MD["sid"]))
-SID = [x for x in SID if x != "241"]
+SIP = sorted(set(MD["sid"]))
+SID = [x for x in SIP if x != "241"]
 SUB = ["epi", "imm", "str"]
 
 # regions of interest
@@ -63,15 +63,15 @@ trj = "outs/trj-{sid}.rds"
 kst = "outs/kst-{sid}.rds"
 ctx = "outs/ctx-{sid}.rds"
 qbs = "outs/qbs-{sub}.rds"
-pbs_kst = "outs/pbs_kst.rds"
+qbt = "outs/qbt.rds"
 mgs = "outs/mgs-{sub}.rds"
 
 # plotting
 plt = []
 
 # raw
-plt_raw = "plts/raw,{out2}-{plt},{sid}.pdf"
-plt_raw_ = "plts/raw,{out2}-{plt},{{sid}}.pdf"
+plt_raw = "plts/raw/raw,{out2},{plt},{sid}.pdf"
+plt_raw_ = "plts/raw/raw,{out2},{plt},{{sid}}.pdf"
 bar = glob_wildcards("code/10-plt_raw,{y}-{z}.R")
 for y,z in zip(bar.y, bar.z):
     plt += expand(plt_raw_, out2=y, plt=z)
@@ -79,8 +79,8 @@ for y,z in zip(bar.y, bar.z):
 # one by nan
 pdf = "plts/{out},{plt},{ids}.pdf"
 foo = "code/10-plt__{x}-{{a}},{{p}}.R"
-for x in ["sid", "sub"]:
-    i = {"sid": SID, "sub": SUB}[x]
+for x in ["sip", "sid", "sub"]:
+    i = {"sip": SIP, "sid": SID, "sub": SUB}[x]
     bar = glob_wildcards(expand(foo, x=x)[0])
     for a,p in zip(bar.a, bar.p):
         plt += expand(pdf, out=a, plt=p, ids=i)
@@ -97,7 +97,9 @@ for x in ["all_sid", "all_sub", "all_sid_all_sub"]:
 pdf = "plts/{out1},{out2},{plt}.pdf"
 foo = "code/10-plt__{x}__{y}-{{a}},{{b}},{{p}}.R"
 for xy in [
+    ["all_raw", "all_sid"],
 	["all_sid", "all_sid"],
+    ["all_sip", "all_sip"],
 	["all_sid", "all_sid_all_sub"]]:
     bar = glob_wildcards(expand(foo, x=xy[0], y=xy[1])[0])
     for a,b,p in zip(bar.a, bar.b, bar.p):
@@ -136,9 +138,9 @@ for x,y,z in zip(foo.x, foo.y, foo.z):
 #plt = [p for p in plt if pat.match(p)]
 #qlt = [q for q in qlt if pat.match(q)]
 
-pat = re.compile(r'^.*kst.*$')
-qlt = [p for p in plt if pat.match(p)]
-plt += expand(qlt, sid=SID, sub="epi")
+# pat = re.compile(r'^.*kst.*$')
+# qlt = [p for p in plt if pat.match(p)]
+# plt += expand(qlt, sid=SID, sub="epi")
 
 # visuals that require so many inputs, 
 # they don't fit with the above schema...
@@ -160,13 +162,18 @@ for x,p in zip(foo.x, foo.p):
 
 rule all:
     input:
-        expand([raw, fil, pol, roi], sid=SID+["241"]),
-        expand([clu, pro, ccc, sig], sid=SID),
-        expand([ist, lv1, pbs, ctx], sid=SID),
+        expand([raw, fil, pol, roi, clu], sid=SIP),
+        # clustering
+        expand([pro, ist, lv1, pbs], sid=SID),
+        # subclustering
         expand([sub, jst, lv2, qbs, mgs], sid=sid, sub=SUB),
-        expand([kst, rep, trj], sid=SID, sub="epi"),
+        expand([kst, qbt], sid=SID),
+        # downstream
+        expand([rep, trj], sid=SID, sub="epi"),
+        expand([sig, ccc, ctx], sid=SID),
+        # visualization
         expand(plt, sid=SID, sub=SUB),
-        expand(qlt, sid=SID)#, pbs_kst
+        expand(qlt, sid=SID)
 
 # analysis =========================================
 
@@ -331,9 +338,10 @@ rule lv2:
 # reclustering
 rule kst:
     priority: 95
-    input:	"code/06-kst.R", rules.ref.output, 
-            "outs/sub-{sid},epi.rds", 
-            "outs/jst-{sid},epi.rds"
+    input:	"code/06-kst.R", 
+            rules.roi.output,
+            rules.lv1.output,
+            rules.ref.output, 
     output:	kst
     log:    "logs/kst-{sid}.Rout"
     shell: '''R CMD BATCH\\
@@ -369,16 +377,16 @@ rule qbs:
 	--no-restore --no-save "--args wcs={wildcards}\
 	{params} {output} ths={threads}" {input[0]} {log}'''
 
-rule pbs_kst:
+one = expand("outs/sub-{sid},epi.rds", sid=SID)
+two = expand("outs/kst-{sid}.rds", sid=SID)
+rule qbt:
 	threads: 30
 	priority: 95
-	input:	"code/00-pbs.R", 
-            x=expand("outs/sub-{sid},epi.rds", sid=SID), 
-            y=expand("outs/kst-{sid}.rds", sid=SID)
+	input:	"code/00-pbs.R", x=one, y=two
 	params:	lambda wc, input: ";".join(input.x),
 			lambda wc, input: ";".join(input.y)
-	output:	pbs_kst
-	log:    "logs/mgs_kst.Rout"
+	output:	qbt
+	log:    "logs/qbt.Rout"
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
 	{params} {output} ths={threads}" {input[0]} {log}'''
@@ -427,12 +435,12 @@ rule rep:
 # trajectory
 rule trj:
 	priority: 92
-	input:	"code/06-trj.R", rep, roi, "outs/jst-{sid},epi.rds"
+	input:	"code/06-trj.R", rep, roi
 	output:	trj
 	log:    "logs/trj-{sid}.Rout"
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {input[3]} {output}" {input[0]} {log}'''	
+	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
 
 # plotting =========================================
 
@@ -450,13 +458,16 @@ rule plt_raw:
 def out(by, n=None):
     o = "out" if n is None else "out"+str(n)
     d = {
+        "sip": "outs/{"+o+"}-{x}.rds",
         "sid": "outs/{"+o+"}-{x}.rds",
         "sub": "outs/{"+o+"}-{x}.rds",
         "sid_sub": "outs/{"+o+"}-{x}.rds",
+        "all_sip": expand("outs/{{"+o+"}}-{x}.rds", x=SIP),
         "all_sid": expand("outs/{{"+o+"}}-{x}.rds", x=SID),
         "all_sub": expand("outs/{{"+o+"}}-{x}.rds", x=SUB),
+        "all_raw": expand("outs/{{"+o+"}}-{x}/se.rds", x=SID),
         "all_sid_one_sub": expand("outs/{{"+o+"}}-{y},{{x}}.rds", y=SID),
-		"one_sid_all_sub": expand("outs/{{"+o+"}}-{{x}},{y}.rds", y=SUB),
+        "one_sid_all_sub": expand("outs/{{"+o+"}}-{{x}},{y}.rds", y=SUB),
         "all_sid_all_sub": expand("outs/{{"+o+"}}-{x},{y}.rds", x=SID, y=SUB)
     }
     return(d[by])
@@ -464,7 +475,7 @@ def out(by, n=None):
 def collect(x): return(x if type(x) == str else ";".join(x))
 
 pat = "plt__{by}-{{out}},{{plt}}"
-for by in ["sid", "sub", "all_sid_one_sub"]:
+for by in ["sip", "sid", "sub", "all_sid_one_sub"]:
     rule:
         name:   "plt__%s" % by
         input:  expand("code/10-"+pat+".R", by=by), a = out(by)
@@ -489,14 +500,16 @@ for by in ["all_sid", "all_sub", "all_sid_all_sub"]:
 
 pat = "plt__{by1}__{by2}-{{out1}},{{out2}},{{plt}}"
 for by in [
+    ["all_raw","all_sid"],
 	["all_sid","all_sid"],
+    ["all_sip","all_sip"],
 	["all_sid","all_sid_all_sub"]]:
     rule:
         name:   "plt__%s__%s" % (by[0], by[1])
         input:  expand("code/10-"+pat+".R", by1=by[0], by2=by[1]),
                 a = out(by[0], 1), b = out(by[1], 2)
-        params: lambda wc, input: ";".join(input.a),
-                lambda wc, input: ";".join(input.b)
+        params: lambda wc, input: collect(input.a),
+                lambda wc, input: collect(input.b)
         log:    expand("logs/"+pat+".Rout", by1=by[0], by2=by[1])
         output:	"plts/{out1},{out2},{plt}.pdf"
         shell: '''R CMD BATCH\
@@ -548,7 +561,7 @@ def out_foo(x):
         fun = out_sid_sub
     return(fun(x))
 
-# epithelial trajectirs
+# epithelial trajectory
 def xxx(x):
 	if x in ["sub", "jst", "lv2"]:
 		rds = "outs/{x}-{{sid}},{sub}.rds"

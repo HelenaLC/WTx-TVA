@@ -651,10 +651,11 @@
         .thm_xy_d(pt)
     ps <- lapply(colnames(y), \(.) {
         ggplot(df, aes(x, y, col=.q(.data[[.]]))) + 
+            ggtitle(.lab(id, nrow(df))) + 
+            .thm_xy_c(pt) + 
             scale_color_gradientn(
-                colors=pals::jet(), n.breaks=6,
-                paste0("q-scaled\n", ., " value")) +
-            ggtitle(.lab(id, nrow(df))) + .thm_xy_c(pt)
+                sprintf("q-scaled\n%s value", .),
+                colors=pals::jet(), n.breaks=6)
     })
     c(list(p0), ps)
 }
@@ -838,8 +839,8 @@ suppressPackageStartupMessages({
 # continuous coloring
 .thm_fig_c <- \(.) {
     thm <- theme(
-        legend.key.width=unit(0.4, "lines"),
-        legend.key.height=unit(0.8, "lines"))
+        legend.key.width=unit(0.2, "lines"),
+        legend.key.height=unit(0.4, "lines"))
     c(.thm_fig(.), list(thm))
 }
 

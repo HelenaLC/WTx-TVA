@@ -10,8 +10,12 @@ names(roi) <- basename(roi <- args[[2]])
 
 # split ROIs into ones denoting class(ification) 
 # as REF/TVA/CRC and trans(itions), respectively
-grp <- factor(grepl("ROI", roi), c(FALSE, TRUE))
-roi <- split(roi, grp); names(roi) <- c("typ", "roi")
+names(grp) <- grp <- ifelse(
+    !grepl("ROI", roi), "typ",
+    ifelse(grepl("REF$", roi), 
+    "ref", "roi"))
+roi <- split(roi, grp)
+sapply(roi, length)
 
 # assign ROI labels to cells
 for (. in names(roi)) {

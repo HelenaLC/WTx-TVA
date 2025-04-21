@@ -2,7 +2,7 @@
 sce <- readRDS(args[[1]])
 
 # plotting
-ps <- .plt_rgb(sce, wcs$sid)
+ps <- .plt_rgb(sce, wcs$x)
 
 # saving
 df <- ps[[1]]$data; dx <- diff(range(df$x)); dy <- diff(range(df$y))

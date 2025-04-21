@@ -29,6 +29,15 @@ xo <- df |>
     arrange(-p) |> pull(roi)
 df <- mutate(df, roi=factor(roi, xo))
 
+# label total
+ns <- df |>
+    group_by(typ) |>
+    summarise_at("n", sum)
+ns <- setNames(ns[[2]], ns[[1]])
+ns <- format(ns, big.mark=",")
+ns <- sprintf("%s (N = %s)", names(ns), ns)
+df$typ <- factor(df$typ, labels=ns)
+
 # cell counts
 ns <- df |>
     group_by(typ, roi) |>
@@ -41,19 +50,14 @@ gg <- ggplot(df, aes(n, roi, fill=k)) +
     guides(fill=guide_legend(override.aes=list(shape=21, stroke=0, size=2))) +
     geom_col(width=1, alpha=2/3, col="white", linewidth=0.1, position="fill") +
     geom_text(size=1.2, hjust=1, aes(0.98, roi, label=m), ns, inherit.aes=FALSE) +
-    scale_x_continuous(n.breaks=6, labels=scales::percent_format()) +
-    labs(x="proportion of cells", y="pathological region") +
     scale_fill_manual(NULL, values=.pal_sub) +
+    labs(x="frequency", y="region") +
     coord_cartesian(expand=FALSE) +
-    theme_bw(6) + theme(
+    .thm_fig_d("minimal") + theme(
         legend.position="none",
-        legend.margin=margin(),
-        legend.key=element_blank(),
         panel.grid=element_blank(),
-        axis.ticks.y=element_blank(),
-        plot.background=element_blank(),
-        legend.key.size=unit(0, "lines"),
-        strip.background=element_rect(fill=NA))
+        axis.ticks=element_blank(),
+        axis.text.x=element_blank())
 
 # saving
-ggsave(args[[3]], gg, units="cm", width=4, height=6)
+ggsave(args[[3]], gg, units="cm", width=5, height=7)

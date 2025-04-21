@@ -56,6 +56,7 @@ ps <- by(df, df$typ, \(df) {
     ps <- by(df, df$sub, \(fd) {
         id <- fd$sub[1]
         nc <- sum(!is.na(fd$kid))
+        fd$kid <- factor(fd$kid, ks[[id]])
         # split by crypts vs. vessels
         gg <- .plt_fq(fd, "roi", "kid", h=TRUE) +
             labs(fill=id) + ggtitle(.lab(id, nc)) 

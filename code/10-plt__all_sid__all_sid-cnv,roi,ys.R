@@ -19,7 +19,7 @@ df <- mapply(
         sce <- sce[, !is.na(sce$typ)]
         i <- intersect(colnames(sce), colnames(cnv))
         df <- data.frame(
-            cnv=.z(colMeans(assay(cnv)[, i]**2)),
+            cnv=.z(colMeans(abs(assay(cnv))[, i])),
             roi=sce[, i]$typ, sid=sce$sid[1])
     }) |> do.call(what=rbind)
 

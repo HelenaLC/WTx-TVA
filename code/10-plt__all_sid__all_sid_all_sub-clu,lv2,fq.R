@@ -6,6 +6,7 @@ ps <- mapply(
         # loading
         sce <- readRDS(x)
         ist <- readRDS(y)$clust
+        ist <- gsub("^epi\\.", "", ist)
         # wrangling
         sid <- gsub(".*([0-9]{3}).*", "\\1", x)
         idx <- intersect(colnames(sce), names(ist))

@@ -15,11 +15,13 @@ df <- mapply(
     SIMPLIFY=FALSE, \(x, y) {
         cnv <- readRDS(x)
         ist <- readRDS(y)$clust
+        ist <- gsub("^epi\\.", "", ist)
         # wrangling
         sid <- gsub(".*([0-9]{3}).*", "\\1", x)
         idx <- intersect(colnames(cnv), names(ist))
-        cnv <- .z(colMeans(assay(cnv))[idx])
-        data.frame(sid, kid=ist[idx], cnv)
+        kid <- gsub("^epi\\.", "", ist[idx])
+        cnv <- .z(colMeans(abs(assay(cnv)))[idx])
+        data.frame(sid, kid, cnv)
     }) |> do.call(what=rbind)
 
 # plotting

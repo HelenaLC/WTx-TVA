@@ -8,6 +8,14 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
+# args <- list(
+#     list.files("outs", "fil", full.names=TRUE),
+#     list.files("outs", "roi", full.names=TRUE),
+#     list.files("outs", "pol", full.names=TRUE),
+#     list.files("outs", "lv1", full.names=TRUE),
+#     "plts/tcs,lv2,xy.pdf")
+# args <- lapply(args, \(.) grep("241", ., value=TRUE, invert=TRUE))
+
 # helper to get spatial coordinates
 .xy <- \(.) {
     xy <- "Center(X|Y)_global_mm"

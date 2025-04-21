@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
     library(sp)
     library(arrow)
     library(HDF5Array)
+    library(slingshot)
     library(concaveman)
     library(SingleCellExperiment)
 })
@@ -31,8 +32,8 @@ ps <- lapply(sid, \(sid) {
     roi <- readRDS(args[[2]][sid]); assays(roi) <- list()
     pol <- read_parquet(args[[3]][sid], as_data_frame=FALSE)
     trj <- readRDS(args[[4]][sid])
-    t <- trj[[grep("time", names(colData(trj)))]]
-    sce$t <- .q(t[match(colnames(sce), colnames(trj))])
+    t <- slingAvgPseudotime(trj$slingshot)
+    sce$t <- .q(t[match(colnames(sce), names(t))])
     # get regions
     ids <- sort(setdiff(unique(roi$roi), NA))
     ids <- ids[!grepl("REF$", ids)]
@@ -49,10 +50,7 @@ ps <- lapply(sid, \(sid) {
             .thm_fig("void") + theme(legend.position="none") +
             geom_polygon(fill=NA, col="black", linewidth=0.2,
                 aes(V1, V2), data.frame(ch), inherit.aes=FALSE) +
-            scale_fill_gradientn(
-                limits=c(0, 1), 
-                na.value="grey",
-                colors=pals::jet())
+            scale_fill_gradientn(limits=c(0, 1), colors=pals::jet(), na.value="lightgrey")
     })
 }) |> Reduce(f=base::c)
 

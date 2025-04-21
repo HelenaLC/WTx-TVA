@@ -6,6 +6,7 @@ suppressPackageStartupMessages({
     library(ggplot2)
     library(tidytext)
     library(HDF5Array)
+    library(slingshot)
     library(SingleCellExperiment)
 })
 
@@ -30,7 +31,7 @@ ps <- mapply(
         ns <- rowSums(nn == "epi", na.rm=TRUE)
         
         # quantify by binned pseudotime
-        t <- .q(epi[[grep("time", names(colData(epi)))]])
+        t <- .q(slingAvgPseudotime(epi$slingshot))
         t <- t[match(colnames(sce), colnames(epi))]
         df <- data.frame(n=ns, k=ks, t)
         xs <- seq(-(dx <- 0.005), 1.005, 0.01)

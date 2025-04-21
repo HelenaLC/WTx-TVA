@@ -19,7 +19,7 @@ lys <- mapply(x=rep(args[[1]], each=3), y=args[[2]], \(x, y) {
 # wrangling
 df <- lys |>
     do.call(what=rbind) |>
-    filter(!is.na(typ), !is.na(kid)) |>
+    filter(!is.na(kid)) |>
     mutate(sid=gsub(".*([0-9]{3}).*", "\\1", typ)) |>
     mutate(typ=gsub("^.*_", "\\1", typ)) |>
     mutate(tyq=gsub("[0-9]$", "", typ))
@@ -39,8 +39,9 @@ aes <- list(
         position="fill", key_glyph="point",
         col="white", alpha=4/5, linewidth=0.1, width=1),
     facet_grid(rows="sub", scales="free_y", space="free"),
+    scale_fill_manual(values=pal, na.value="lightgrey"),
+    scale_y_discrete(labels=\(.) gsub("^epi\\.", "", .)),
     coord_cartesian(expand=FALSE),
-    scale_fill_manual(values=pal),
     labs(x="frequency"),
     .thm_fig_d("minimal"), theme(
         legend.position="none",
@@ -54,7 +55,16 @@ foo <- \(df) {
     ty <- grep("typ|q", names(df), value=TRUE)
     fd <- filter(df, !!sym(ty) == "REF")
     ks <- unique(arrange(fd, p)$kid)
-    mutate(df, kid=factor(kid, ks))
+    ss <- c("epi", "imm", "str")
+    ns <- fd |>
+        group_by(sub) |>
+        summarize_at("n", sum)
+    ns <- setNames(ns[[2]], ns[[1]])
+    ns <- format(ns, big.mark=",")[ss]
+    ls <- sprintf("%s (N = %s)", ss, ns)
+    mutate(df, 
+        kid=factor(kid, ks), 
+        sub=factor(sub, ss, ls))
 }
 
 # joint

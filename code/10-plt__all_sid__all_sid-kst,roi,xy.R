@@ -18,7 +18,7 @@ ps <- mapply(
         ist <- readRDS(x)$clust
         sce <- readRDS(y)
         # restrict to cells in REF region
-        sce <- sce[, grep("REF$", sce$roi)]
+        sce <- sce[, !is.na(sce$ref)]
         idx <- match(colnames(sce), names(ist))
         # plot joint/split cluster assignments
         sid <- gsub(".*([0-9]{3}).*", "\\1", x)

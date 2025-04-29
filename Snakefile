@@ -61,6 +61,7 @@ lv2 = "outs/lv2-{sid},{sub}.rds"
 rep = "outs/rep-{sid}.rds"
 trj = "outs/trj-{sid}.rds"
 kst = "outs/kst-{sid}.rds"
+req = "outs/req-{sid}.rds"
 ctx = "outs/ctx-{sid}.rds"
 qbs = "outs/qbs-{sub}.rds"
 qbt = "outs/qbt.rds"
@@ -167,7 +168,7 @@ rule all:
         expand([pro, ist, lv1, pbs], sid=SID),
         # subclustering
         expand([sub, jst, lv2, qbs, mgs], sid=sid, sub=SUB),
-        expand([kst, qbt], sid=SID),
+        expand([kst, qbt, req], sid=SID),
         # downstream
         expand([rep, trj], sid=SID, sub="epi"),
         expand([sig, ccc, ctx], sid=SID),
@@ -441,6 +442,19 @@ rule trj:
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
+
+# reprocessing
+rule req:
+	threads: 20
+	priority: 94
+	input:	"code/07-req.R", 
+            rules.fil.output,
+            rules.kst.output
+	output:	req
+	log:    "logs/req-{sid}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''
 
 # plotting =========================================
 

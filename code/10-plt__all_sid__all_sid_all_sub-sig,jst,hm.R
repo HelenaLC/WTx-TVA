@@ -37,7 +37,7 @@ auc <- mapply(
 # wrangling
 names(sub) <- sub <- c("epi", "imm", "str")
 auc <- lapply(sub, \(sub) do.call(cbind, lapply(auc, \(.) .[[sub]])))
-auc <- lapply(auc, \(.) { assay(.) <- scale(assay(.)); . })
+#auc <- lapply(auc, \(.) { assay(.) <- scale(assay(.)); . })
 
 # plotting
 .l <- \(.) gsub("^(HALLMARK|GOBP|GAVISH_3CA_MALIGNANT_(METAPROGRAM_)+[0-9]+)_", "", .)

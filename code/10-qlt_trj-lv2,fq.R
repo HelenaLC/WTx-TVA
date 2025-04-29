@@ -44,9 +44,10 @@ ps <- lapply(sub, \(.) {
         mutate(
             t=cut(t, breaks=xs),
             t=xs[as.integer(t)]+dx,
-            t=factor(t, sort(unique(t)))) |>
+            t=factor(t, paste((xs+dx)[-length(xs)]))) |>
         group_by(k, t) |>
         summarize_at("p", mean, na.rm=TRUE)
+    if (. == "epi") fd$k <- gsub("^epi\\.", "", fd$k)
     ggplot(fd, aes(t, p, fill=k)) +
         geom_col(width=1, key_glyph="point", position="fill") +
         (if (. == "epi") ggtitle(.lab(wcs$sid, ncol(res)))) +

@@ -42,7 +42,7 @@ z <- as.matrix(y[, -1])
 rownames(z) <- y[[1]]
 
 # plotting
-l <- \(.) gsub("^(HALLMARK|GOBP|GAVISH_3CA_MALIGNANT_(METAPROGRAM_)+[0-9]+)_", "", .)
+l <- \(.) gsub("^(HALLMARK|GOBP|GAVISH_3CA_MALIGNANT_METAPROGRAM_[0-9]+)_", "", .)
 p <- ggplot(distinct(fd, roi, typ), aes(roi, 1, fill=typ)) +
     geom_tile(show.legend=FALSE, col="white", linewidth=0.1) +
     coord_equal(expand=FALSE) + theme_void() +

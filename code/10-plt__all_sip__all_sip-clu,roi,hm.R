@@ -61,10 +61,13 @@ id <- with(rd, paste(sid, clu, sep="."))
 rownames(rd) <- rownames(mx) <- id
 cd <- lys[[1]]$cd
 
-ps <- lapply(c("all", "240", levels(rd$sid)), \(sid) {
+ps <- lapply(c("all", "sub", "240", levels(rd$sid)), \(sid) {
     # subset section(s) of interest
     if (sid == "240") {
         idx <- rownames(rd)[grep("^24", rd$sid)]
+        mx <- mx[idx, ]; rd <- rd[idx, ]
+    } else if (sid == "sub") {
+        idx <- rownames(rd)[-grep("^24", rd$sid)]
         mx <- mx[idx, ]; rd <- rd[idx, ]
     } else if (sid != "all") {
         idx <- rownames(rd)[rd$sid == sid]
@@ -92,20 +95,21 @@ ps <- lapply(c("all", "240", levels(rd$sid)), \(sid) {
         grid_height=unit(0.2, "mm"),
         legend_height=unit(1, "cm"))
     # plotting
-    Heatmap(t(scale(t(mx))),
+    big <- sid %in% c("all", "sub")
+    Heatmap(t(.z(t(mx), th=4)),
         use_raster=TRUE, raster_quality=10,
         col=col, name="z-scaled\nCNV score",
         heatmap_legend_param=lgd,
         row_names_gp=gpar(fontsize=3),
-        show_row_names=sid != "all",
+        show_row_names=!big,
         show_column_names=FALSE,
         row_names_side="left",
         row_dend_gp=gpar(lwd=0.2),
-        right_annotation=rowAnnotation(
-            df=select(rd, tot),
-            show_annotation_name=FALSE,
-            col=pal, show_legend=FALSE,
-            annotation_name_gp=gpar(fontsize=4)),
+        # right_annotation=rowAnnotation(
+        #     df=select(rd, tot),
+        #     show_annotation_name=FALSE,
+        #     col=pal, show_legend=FALSE,
+        #     annotation_name_gp=gpar(fontsize=4)),
         left_annotation=rowAnnotation(
             df=select(
                 rd[, !colAlls(is.na(rd))], 
@@ -116,8 +120,8 @@ ps <- lapply(c("all", "240", levels(rd$sid)), \(sid) {
             show_annotation_name=FALSE,
             df=cd, col=qal, show_legend=FALSE,
             annotation_name_gp=gpar(fontsize=4)),
-        row_split=if (sid == "all") rd$sid, 
-        row_title=if (sid != "all") sid else character(),
+        row_split=if (big) rd$sid, 
+        row_title=if (!big) sid else character(),
         column_split=cd$chr,
         cluster_columns=FALSE,
         column_title_rot=45,
@@ -130,7 +134,7 @@ ps <- lapply(c("all", "240", levels(rd$sid)), \(sid) {
 # saving
 tf <- replicate(length(ps), tempfile(fileext=".pdf"), FALSE)
 for (. in seq_along(ps)) {
-    if (. == 1) {
+    if (. < 3) {
         w <- 15; h <- 9
     } else {
         w <- 12; h <- 5

@@ -43,10 +43,11 @@ ps <- mapply(
         mu <- data.frame(name=unique(df["name"]), y=mean(raw$nCount_RNA))
 
         # aesthetics
-        dy <- ceiling(max(mu$y)/500)*500
+        dy <- ceiling(max(mu$y)/400)*400
         n <- ncol(raw); m <- ncol(fil)
         n <- format(n, big.mark=",")
         m <- format(m, big.mark=",")
+        i <- paste(raw$sid[1])
         md <- metadata(fil)
 
         # plotting
@@ -55,12 +56,13 @@ ps <- mapply(
             geom_vline(xintercept=md$th_d, col="red", linewidth=0.2, lty=2) +
             geom_hline(yintercept=md$th_n, col="red", linewidth=0.2, lty=2) +
             geom_hline(data=mu, aes(yintercept=y), col="blue", linewidth=0.2) +
-            ggtitle(bquote(bold(.(raw$sid[1]))~"(N ="~.(n)*";"~.(m)*")")) +
+            ggtitle(bquote(bold(.(i))~"(N ="~.(n)*";"~.(m)*")")) +
             labs(x="distance to FOV border (px)", y="counts (RNA)") +
             coord_cartesian(xlim=c(0, 400), ylim=c(0, dy)) +
             .thm_fig_c("bw") + theme(
                 aspect.ratio=2/3,
-                panel.grid=element_blank())
+                panel.grid=element_blank(),
+                strip.background=element_blank())
     })
 
 # saving

@@ -7,26 +7,25 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
-args <- lapply(args, \(.) .[!grepl("210", .)])
-
 # loading
+args <- lapply(args, \(.) .[!grepl("210", .)])
 df <- mapply(
     x=args[[1]], y=args[[2]], 
     SIMPLIFY=FALSE, \(x, y) {
         cnv <- readRDS(x)
         sce <- readRDS(y)
+        sid <- sce$sid[1]
         # wrangling
         sce <- sce[, !is.na(sce$typ)]
-        i <- intersect(colnames(sce), colnames(cnv))
-        df <- data.frame(
-            cnv=.z(colMeans(abs(assay(cnv))[, i])),
-            roi=sce[, i]$typ, sid=sce$sid[1])
+        idx <- intersect(colnames(sce), colnames(cnv))
+        cnv <- .z(colMeans(abs(assay(cnv[, idx]))))
+        data.frame(cnv, colData(sce[, idx]))
     }) |> do.call(what=rbind)
 
 # plotting
-typ <- gsub("^.*_", "", df$roi)
-df$typ <- factor(typ, names(.pal_roj))
-gg <- ggplot(df, aes(typ, cnv, fill=typ)) + geom_boxplot(
+roi <- gsub("^.*_", "", df$typ)
+df$roi <- factor(roi, names(.pal_roj))
+gg <- ggplot(df, aes(roi, cnv, fill=roi)) + geom_boxplot(
     outlier.shape=16, outlier.size=0.2, outlier.stroke=0,
     key_glyph="point", show.legend=TRUE, alpha=2/3, linewidth=0.2) +
     facet_grid(~sid, space="free", scales="free_x") +

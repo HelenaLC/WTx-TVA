@@ -26,8 +26,8 @@ df <- mapply(
         pol <- read_parquet(pol, as_data_frame=FALSE)
         kid <- readRDS(ist)$clust
         # get regions corresponding to transition crypts
-        typ <- gsub(".*(REF|TVA|CRC).*", "\\1", roi$typ)
-        roi$typ <- factor(typ, c("REF", "TVA", "CRC"))
+        typ <- gsub("^.*_", "", roi$typ)
+        roi$typ <- factor(typ, names(.pal_roj))
         ids <- sort(setdiff(unique(roi$roi), NA))
         ids <- grep("(BV|LI|REF)$", ids, invert=TRUE, value=TRUE)
         df <- lapply(ids, \(id) {
@@ -57,7 +57,7 @@ df <- mapply(
 # plotting
 fd <- df[df$sel & df$kid == "epi", ]
 p1 <- .plt_fq(fd, "roi", "typ", id="epi") +
-    scale_fill_manual(values=.pal_roi)
+    scale_fill_manual(values=.pal_roj)
 
 p2 <- .plt_fq(df, "roi", "kid", id="all") +
     scale_fill_manual(values=.pal_sub) +

@@ -19,9 +19,9 @@ df <- mapply(
         # wrangling
         sid <- gsub(".*([0-9]{3}).*", "\\1", x)
         idx <- intersect(colnames(cnv), names(ist))
+        cnv <- .z(colMeans(abs(assay(cnv[, idx]))))
         kid <- gsub("^epi\\.", "", ist[idx])
-        cnv <- .z(colMeans(abs(assay(cnv)))[idx])
-        data.frame(sid, kid, cnv)
+        data.frame(sid, cnv, kid)
     }) |> do.call(what=rbind)
 
 # plotting

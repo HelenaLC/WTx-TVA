@@ -33,7 +33,8 @@ df <- mapply(SIMPLIFY=FALSE, sce=args[[1]],
 # wrangling
 fd <- df |>
     filter(kid != "", !is.na(n)) |> 
-    group_by(sid) |> mutate(m=.z(n))
+    group_by(sid) |> mutate(m=.z(n)) |>
+    mutate(kid=gsub("^epi\\.", "", kid))
 
 # plotting
 gg <- ggplot(fd,

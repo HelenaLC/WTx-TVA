@@ -37,7 +37,6 @@ df <- lapply(sub, \(.) {
 }) 
 
 # plotting
-xs <- seq(-(dx <- 0.01), 1.01, 0.02)
 xs <- seq(-(dx <- 0.005), 1.005, 0.01)
 ps <- lapply(sub, \(.) {
     fd <- df[[.]] |>

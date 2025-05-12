@@ -45,10 +45,11 @@ fil = "outs/fil-{sid}.rds"
 roi = "outs/roi-{sid}.rds"
 pol = "outs/pol-{sid}.parquet"
 # downstream
-pro = "outs/pro-{sid}.rds"
-clu = "outs/clu-{sid}.rds"
-sig = "outs/sig-{sid}.rds"
+ctx = "outs/ctx-{sid}.rds"
 ccc = "outs/ccc-{sid}.rds"
+pro = "outs/pro-{sid}.rds"
+sig = "outs/sig-{sid}.rds"
+clu = "outs/clu-{sid}.rds"
 # clustering
 ist = "outs/ist-{sid}.rds"
 lv1 = "outs/lv1-{sid}.rds"
@@ -62,10 +63,9 @@ rep = "outs/rep-{sid}.rds"
 trj = "outs/trj-{sid}.rds"
 kst = "outs/kst-{sid}.rds"
 req = "outs/req-{sid}.rds"
-ctx = "outs/ctx-{sid}.rds"
+mgs = "outs/mgs-{sub}.rds"
 qbs = "outs/qbs-{sub}.rds"
 qbt = "outs/qbt.rds"
-mgs = "outs/mgs-{sub}.rds"
 
 # plotting
 plt = []
@@ -107,15 +107,17 @@ for xy in [
         plt += expand(pdf, out1=a, out2=b, plt=p)
 
 # two by sid
-pdf = "plts/{out1},{out2},{plt},{{sid}}.pdf"
+pdf = "plts/{out1},{out2},{plt},{sid}.pdf"
 foo = "code/10-plt__{x}__{y}-{{a}},{{b}},{{p}}.R"
 for xy in [
     ["sid", "sid"],
+    ["sip", "sip"],
     ["sid", "one_sid_all_sub"],
     ["one_sid_all_sub", "one_sid_all_sub"]]:
     bar = glob_wildcards(expand(foo, x=xy[0], y=xy[1])[0])
+    i = [SIP if "sip" in xy else SID][0]
     for a,b,p in zip(bar.a, bar.b, bar.p):
-        plt += expand(pdf, out1=a, out2=b, plt=p)
+        plt += expand(pdf, out1=a, out2=b, plt=p, sid=i)
 
 # one by sub
 pdf = "plts/{out1},{plt},{{sub}}.pdf"
@@ -163,20 +165,22 @@ for x,p in zip(foo.x, foo.p):
 
 rule all:
     input:
-        expand([raw, fil, pol, roi, clu], sid=SIP),
+        # setup
+        expand([raw, fil, pol], sid=SIP),
+        expand([roi, sig, lv1], sid=SIP),
         # clustering
-        expand([pro, ist, lv1, pbs], sid=SID),
+        expand([pro, ist, pbs], sid=SID),
         # subclustering
-        expand([sub, jst, lv2, qbs, mgs], sid=sid, sub=SUB),
+        expand([sub, jst, lv2, qbs, mgs], sid=SID, sub=SUB),
         expand([kst, qbt, req], sid=SID),
         # downstream
-        expand([rep, trj], sid=SID, sub="epi"),
-        expand([sig, ccc, ctx], sid=SID),
+        expand([ctx, ccc, rep, trj], sid=SID),
         # visualization
-        expand(plt, sid=SID, sub=SUB),
-        expand(qlt, sid=SID)
+        expand(plt + qlt, sid=SID)
 
 # analysis =========================================
+
+def pool(x): return(x if type(x) == str else ";".join(x))
 
 # reference
 rule ref:
@@ -223,31 +227,57 @@ rule fil:
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''
-	
-# signatures
-rule sig:
-    priority: 97
-    threads: 10
-    input:  "code/03-sig.R", fil, 
-            x = expand("meta/sig/sig-{sub}.json", sub=SUB)
-    params:	lambda wc, input: ";".join(input.x)
-    output:	sig
-    log:    "logs/sig-{sid}.Rout"
-    shell: '''R CMD BATCH\\
-    --no-restore --no-save "--args wcs={wildcards}\
-    {input[1]} {params} {output} ths={threads}" {input[0]} {log}'''
 
 # polygons
 def foo(wildcards): return(expand(
 	"data/raw/{did}/polygons.csv.gz", 
 	did=MD["did"][MD["sid"] == wildcards.sid]))
 rule pol:
-	input: 	"code/03-pol.R", fil, foo
-	output:	pol
-	log: 	"logs/pol-{sid}.Rout"
+    priority: 97
+    input: 	"code/03-pol.R", fil, foo
+    output:	pol
+    log: 	"logs/pol-{sid}.Rout"
+    shell: '''R CMD BATCH\\
+    --no-restore --no-save "--args wcs={wildcards}\
+    {input[1]} {input[2]} {output}" {input[0]} {log}'''
+
+# regions
+def foo(wildcards): return(expand(
+	"imgs/{did}/shapes/{sid}/{roi}",
+	did=MD["did"][MD["sid"] == wildcards.sid],
+	sid=wildcards.sid, roi=ROI[wildcards.sid]))
+rule roi:
+	input:	"code/03-roi.R", fil, x = foo
+	params: lambda wc, input: pool(input.x)
+	output:	roi
+	log:	"logs/roi-{sid}.Rout"
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {output}" {input[0]} {log}'''
+	{input[1]} {params} {output[0]}" {input[0]} {log}'''
+
+# signatures
+rule sig:
+    priority: 97
+    threads: 10
+    input:  "code/03-sig.R", fil, 
+            x = expand("meta/sig/sig-{sub}.json", sub=SUB)
+    params:	lambda wc, input: pool(input.x)
+    output:	sig
+    log:    "logs/sig-{sid}.Rout"
+    shell: '''R CMD BATCH\\
+    --no-restore --no-save "--args wcs={wildcards}\
+    {input[1]} {params} {output} ths={threads}" {input[0]} {log}'''
+
+
+# communication
+rule ccc:
+	threads: 33
+	input:	"code/04-ccc.R", fil
+	output:	ccc
+	log:    "logs/ccc-{sid}.Rout"
+	shell: '''R CMD BATCH\\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {output[0]} ths={threads}" {input[0]} {log}'''
 
 # processing
 rule pro:
@@ -259,30 +289,6 @@ rule pro:
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''
-
-# regions
-def foo(wildcards): return(expand(
-	"imgs/{did}/shapes/{sid}/{roi}",
-	did=MD["did"][MD["sid"] == wildcards.sid],
-	sid=wildcards.sid, roi=ROI[wildcards.sid]))
-rule roi:
-	input:	"code/03-roi.R", fil, x = foo
-	params: lambda wc, input: ";".join(input.x)
-	output:	roi
-	log:	"logs/roi-{sid}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {params} {output[0]}" {input[0]} {log}'''
-
-# communication
-rule ccc:
-	threads: 40
-	input:	"code/04-ccc.R", fil
-	output:	ccc
-	log:    "logs/ccc-{sid}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {output[0]} ths={threads}" {input[0]} {log}'''
 
 # clustering
 rule ist:
@@ -305,15 +311,26 @@ rule lv1:
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
 
+# metastasis
+rule lnm:
+    priority: 97
+    input:  "code/03-lnm.R",
+            "outs/fil-241.rds"
+    output: "outs/lv1-241.rds"
+    log:    "logs/lnm.Rout"
+    shell: '''R CMD BATCH\\
+    --no-restore --no-save "--args wcs={wildcards}\
+    {input[1]} {output}" {input[0]} {log}'''
+
 # subsetting
 rule sub:
-	priority: 97
-	input:	"code/04-sub.R", fil, lv1
-	output:	expand("outs/sub-{{sid}},{sub}.rds", sub=SUB)
-	log:    "logs/sub-{sid}.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
+    priority: 97
+    input:	"code/04-sub.R", fil, lv1
+    output:	expand("outs/sub-{{sid}},{sub}.rds", sub=SUB)
+    log:    "logs/sub-{sid}.Rout"
+    shell: '''R CMD BATCH\\
+    --no-restore --no-save "--args wcs={wildcards}\
+    {input[1]} {input[2]} {output}" {input[0]} {log}'''	
 
 # subclustering
 rule jst:
@@ -356,8 +373,8 @@ rule pbs:
 	priority: 94
 	threads: 20
 	input:	"code/00-pbs.R", x=one, y=two
-	params:	lambda wc, input: ";".join(input.x),
-			lambda wc, input: ";".join(input.y)
+	params:	lambda wc, input: pool(input.x),
+			lambda wc, input: pool(input.y)
 	output:	pbs
 	log:    "logs/pbs.Rout"
 	shell: '''R CMD BATCH\\
@@ -370,8 +387,8 @@ rule qbs:
 	threads: 30
 	priority: 95
 	input:	"code/00-pbs.R", x=one, y=two
-	params:	lambda wc, input: ";".join(input.x),
-			lambda wc, input: ";".join(input.y)
+	params:	lambda wc, input: pool(input.x),
+			lambda wc, input: pool(input.y)
 	output:	qbs
 	log:    "logs/qbs-{sub}.Rout"
 	shell: '''R CMD BATCH\\
@@ -384,8 +401,8 @@ rule qbt:
 	threads: 30
 	priority: 95
 	input:	"code/00-pbs.R", x=one, y=two
-	params:	lambda wc, input: ";".join(input.x),
-			lambda wc, input: ";".join(input.y)
+	params:	lambda wc, input: pool(input.x),
+			lambda wc, input: pool(input.y)
 	output:	qbt
 	log:    "logs/qbt.Rout"
 	shell: '''R CMD BATCH\\
@@ -398,8 +415,8 @@ rule mgs:
 	threads: 30
 	priority: 95
 	input:	"code/00-mgs.R", x=one, y=two
-	params:	lambda wc, input: ";".join(input.x),
-			lambda wc, input: ";".join(input.y)
+	params:	lambda wc, input: pool(input.x),
+			lambda wc, input: pool(input.y)
 	output:	mgs
 	log:    "logs/mgs-{sub}.Rout"
 	shell: '''R CMD BATCH\\
@@ -412,8 +429,8 @@ rule ctx:
 	input:	"code/06-ctx.R", 
 			x = expand(fil, sid=SID),
 			y = expand(jst, sid=SID, sub=SUB)
-	params:	lambda wc, input: ";".join(input.x),
-			lambda wc, input: ";".join(input.y)
+	params:	lambda wc, input: pool(input.x),
+			lambda wc, input: pool(input.y)
 	output:	expand(ctx, sid=SID)
 	log:    "logs/ctx.Rout"
 	shell: '''R CMD BATCH\\
@@ -486,14 +503,12 @@ def out(by, n=None):
     }
     return(d[by])
 
-def collect(x): return(x if type(x) == str else ";".join(x))
-
 pat = "plt__{by}-{{out}},{{plt}}"
 for by in ["sip", "sid", "sub", "all_sid_one_sub"]:
     rule:
         name:   "plt__%s" % by
         input:  expand("code/10-"+pat+".R", by=by), a = out(by)
-        params: lambda wc, input: collect(input.a)
+        params: lambda wc, input: pool(input.a)
         log:    expand("logs/"+pat+",{{x}}.Rout", by=by) 
         output: "plts/{out},{plt},{x}.pdf"
         shell: '''R CMD BATCH\
@@ -505,7 +520,7 @@ for by in ["all_sid", "all_sub", "all_sid_all_sub"]:
     rule:
         name:   "plt__%s" % by
         input:	expand("code/10-"+pat+".R", by=by), a = out(by)
-        params: lambda wc, input: collect(input.a)
+        params: lambda wc, input: pool(input.a)
         log:	expand("logs/"+pat+".Rout", by=by)
         output:	"plts/{out},{plt}.pdf"
         shell: '''R CMD BATCH\
@@ -522,8 +537,8 @@ for by in [
         name:   "plt__%s__%s" % (by[0], by[1])
         input:  expand("code/10-"+pat+".R", by1=by[0], by2=by[1]),
                 a = out(by[0], 1), b = out(by[1], 2)
-        params: lambda wc, input: collect(input.a),
-                lambda wc, input: collect(input.b)
+        params: lambda wc, input: pool(input.a),
+                lambda wc, input: pool(input.b)
         log:    expand("logs/"+pat+".Rout", by1=by[0], by2=by[1])
         output:	"plts/{out1},{out2},{plt}.pdf"
         shell: '''R CMD BATCH\
@@ -534,14 +549,15 @@ for by in [
 pat = "plt__{by1}__{by2}-{{out1}},{{out2}},{{plt}}"
 for by in [
     ["sid","sid"],
+    ["sip","sip"],
     ["sid","one_sid_all_sub"],
     ["one_sid_all_sub","one_sid_all_sub"]]:
     rule:
         name:   "plt__%s__%s" % (by[0], by[1])
         input:  expand("code/10-"+pat+".R", by1=by[0], by2=by[1]),
                 a = out(by[0], 1), b = out(by[1], 2)
-        params: lambda wc, input: collect(input.a),
-                lambda wc, input: collect(input.b)
+        params: lambda wc, input: pool(input.a),
+                lambda wc, input: pool(input.b)
         log:    expand("logs/"+pat+",{{x}}.Rout", by1=by[0], by2=by[1])
         output: "plts/{out1},{out2},{plt},{x}.pdf"
         shell: '''R CMD BATCH\
@@ -555,8 +571,8 @@ for by in [
         name:   "plt__%s__%s" % (by[0], by[1])
         input:  expand("code/10-"+pat+".R", by1=by[0], by2=by[1]),
                 a = out(by[0], 1), b = out(by[1], 1)
-        params: lambda wc, input: collect(input.a),
-                lambda wc, input: collect(input.b)
+        params: lambda wc, input: pool(input.a),
+                lambda wc, input: pool(input.b)
         log:    expand("logs/"+pat+",{{x}},{{y}}.Rout", by1=by[0], by2=by[1])
         output: "plts/{out1},{out2},{plt},{x},{y}.pdf"
         shell: '''R CMD BATCH\
@@ -592,7 +608,7 @@ for x,p in zip(foo.x, foo.p):
         priority: 7
         input:  expand(qlt_trj_r, x=x, p=p), trj, fil, z = xxx(x)
         log:    "logs/qlt_trj-"+x+","+p+",{sid}.Rout"
-        params:	lambda wc, input: ";".join(input.z)
+        params:	lambda wc, input: pool(input.z)
         output:	expand(qlt_trj_p, x=x, p=p)
         shell: '''R CMD BATCH\
         --no-restore --no-save "--args wcs={wildcards}\
@@ -609,10 +625,10 @@ for x,p in zip(foo.x, foo.p):
                 c = out_sid("pol", "parquet"),
                 d = out_foo(x)
         log:	"logs/qlt_tcs-"+x+","+p+".Rout"
-        params:	lambda wc, input: ";".join(input.a),
-                lambda wc, input: ";".join(input.b),
-                lambda wc, input: ";".join(input.c),
-                lambda wc, input: ";".join(input.d)
+        params:	lambda wc, input: pool(input.a),
+                lambda wc, input: pool(input.b),
+                lambda wc, input: pool(input.c),
+                lambda wc, input: pool(input.d)
         output:	expand(qlt_tcs_p, x=x, p=p)
         shell: '''R CMD BATCH\
         --no-restore --no-save "--args\

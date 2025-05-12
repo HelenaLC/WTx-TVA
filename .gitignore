@@ -2,9 +2,11 @@ _*/
 figs/
 imgs/
 meta/
+data/*
+plts/*
+outs/*
+logs/*
 code/11-*
-outs/raw-*
-**/*
 !**/*.R
 !**/*.qmd
 !*/.gitkeep

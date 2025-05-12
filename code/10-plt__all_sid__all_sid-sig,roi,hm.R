@@ -42,7 +42,6 @@ z <- as.matrix(y[, -1])
 rownames(z) <- y[[1]]
 
 # plotting
-l <- \(.) gsub("^(HALLMARK|GOBP|GAVISH_3CA_MALIGNANT_METAPROGRAM_[0-9]+)_", "", .)
 p <- ggplot(distinct(fd, roi, typ), aes(roi, 1, fill=typ)) +
     geom_tile(show.legend=FALSE, col="white", linewidth=0.1) +
     coord_equal(expand=FALSE) + theme_void() +
@@ -54,7 +53,7 @@ q <- ggplot(fd, aes(roi, set, fill=val)) +
         low="turquoise", high="purple",
         limits=c(-2.5, 2.5), n.breaks=5) +
     labs(x="pathological region", y="gene signature") +
-    scale_y_discrete(limits=.yo(z), labels=l, position="right") +
+    scale_y_discrete(limits=.yo(z), position="right") +
     coord_equal(3/4, expand=FALSE) +
     .thm_fig_c("minimal") + theme(
         axis.title=element_blank(),

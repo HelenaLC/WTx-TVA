@@ -40,7 +40,6 @@ auc <- lapply(sub, \(sub) do.call(cbind, lapply(auc, \(.) .[[sub]])))
 #auc <- lapply(auc, \(.) { assay(.) <- scale(assay(.)); . })
 
 # plotting
-.l <- \(.) gsub("^(HALLMARK|GOBP|GAVISH_3CA_MALIGNANT_(METAPROGRAM_)+[0-9]+)_", "", .)
 .p <- \(x, i, xo=TRUE, yo=TRUE) {
     n <- length(unique(x$kid))
     x <- select(x, kid, name, value)
@@ -48,7 +47,7 @@ auc <- lapply(sub, \(sub) do.call(cbind, lapply(auc, \(.) .[[sub]])))
     z <- as.matrix(y[, -1]); rownames(z) <- y[[1]]
     ggplot(x, aes(kid, name, fill=value)) +
         (if (xo) scale_x_discrete(limits=.yo(z), position="top")) +
-        (if (yo) scale_y_discrete(limits=.xo(z), labels=.l)) +
+        (if (yo) scale_y_discrete(limits=.xo(z))) +
         scale_fill_gradient2(
             "z-scaled\nmean AUCell",
             low="turquoise", high="purple",

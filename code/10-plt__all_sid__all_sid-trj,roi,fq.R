@@ -8,12 +8,6 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
-# args <- list(
-#     list.files("outs", "trj", full.names=TRUE),
-#     list.files("outs", "roi", full.names=TRUE),
-#     "plts/trj,roi,fq.pdf")
-# args <- lapply(args, \(.) grep("241", ., value=TRUE, invert=TRUE))
-
 df <- mapply(
     x=args[[1]], y=args[[2]],
     SIMPLIFY=FALSE, \(x, y) {
@@ -22,7 +16,7 @@ df <- mapply(
         sce <- readRDS(y)
         # wrangling
         pt <- .q(averagePseudotime(trj$slingshot))
-        cs <- colnames(sce)[!is.na(sce$roi) & !grepl("(BV|LI)", sce$roi)]
+        cs <- colnames(sce)[!is.na(sce$typ)]
         df <- data.frame(colData(sce)[cs, ], pt=pt[cs])
     }) |> do.call(what=rbind)
 
@@ -30,8 +24,8 @@ df <- mapply(
 xs <- seq(-(dx <- 0.005), 1.005, 0.01)
 mu <- df |>
     filter(!is.na(pt), !is.na(typ)) |>
-    mutate(tyq=gsub(".*(REF|TVA|CRC).*", "\\1", typ)) |>
-    mutate(tyq=factor(tyq, rev(names(.pal_roi)))) |>
+    mutate(tyq=gsub("^.*_", "", typ)) |>
+    mutate(tyq=factor(tyq, rev(names(.pal_roj)))) |>
     mutate(
         t=cut(pt, breaks=xs),
         t=xs[as.integer(t)]+dx,
@@ -46,7 +40,7 @@ ps <- by(mu, mu$sid, \(mv) {
     ggplot(mv, aes(t, p, fill=tyq)) +
         geom_col(width=1, key_glyph="point", position="fill") +
         labs(x="pseudotime", y="frequency", title=mv$sid[1]) +
-        scale_fill_manual(values=.pal_roi) +
+        scale_fill_manual(values=.pal_roj) +
         geom_col(position="fill") +
         .thm_fig_d("minimal") + theme(
             legend.position="none",

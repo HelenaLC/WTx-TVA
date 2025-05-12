@@ -16,29 +16,29 @@ sce <- lapply(setNames(args[[1]], sub), \(.)
 # restrict to selected features
 gs <- list(
     epi=list(
-        "epi.EE"=c("PYY", "SST", "CHGA", "CHGB", "NEUROD1", "GCG", "INSL5", "TAC1"),
+        "epi.EE"=c("PYY", "SST", "CHGA", "CHGB", "NEUROD1", "GCG", "INSL5"),
         "epi.goblet"=c("BEST2", "MUC2", "MUC4", "TFF3", "FCGBP", "ZG16", "ATOH1", "KLK1", "CLCA1", "ITLN1"),
         "epi.goblet-like_REG4"=c("MUC5AC", "REG4", "GRIP2", "RETNLB", "SYTL1", "PLXND1"),
         "epi.inflam_REG1A"=c("SAA1", "OLFM4", "DMBT1", "S100A9", "HLA-DRA", "HLA-DPA1", "CXCL1", "CXCL2", "CXCL3"),
         "epi.paneth-like_DEFA6"=c("REG1A", "REG1B", "REG3A", "DEFA5", "DEFA6", "DLL1", "ITLN2"),
-        "epi.entero"=c("FABP1", "CA1", "CA2", "CA4", "PI3", "PHGR1", "GUCA2A", "MS4A12", "CEACAM7", "SLC26A3"),
+        "epi.entero"=c("FABP1", "CA1", "CA2", "CA4", "GUCA2A", "MS4A12", "CEACAM7", "SLC26A3"),
         "epi.entero-like_ACSF2"=c("TTLL3", "PIGZ", "CCDC183", "SELENBP1", "ACSF2", "SHROOM1", "EXD3"),
         "epi.entero-like_EREG"=c(
-            "VEGFA", "EGR1", "EREG", "ANO9", "NR4A1", "NCOA7", "TNNC2", 
-            "ARID3A", "FITM2", "UCKL1", "SRPX2", "SPAG4", "THBS1", "HBEGF"),
+            "EREG", "ANO9", "NCOA7", "TNNC2", "ARID3A", 
+            "FITM2", "UCKL1", "SRPX2", "SPAG4", "THBS1", "HBEGF"),
         "epi.stem-like_LGR5"=c("LGR5", "FN1", "STRAP", "CDX2", "TGFBI", "CEL", "SMOC2", "ASCL2", "RNF43", "RGMB"),
         "epi.stem-like_CLU"=c("LEFTY1", "CLU", "PTGDR", "CD44", "SAMD5", "KIF13A", "TRPM5"),
         "epi.fetal-like_MMP7"=c(
             "NOTUM", "KRT23", "UBD", "FLNA", "FSTL3", "CAVIN1", "BST2", 
-            "KLK6", "KLK10", "AKAP12", "PMEPA1", "TIMP2", "PPL", "S100A4", "SDC4", 
+            "KLK6", "KLK10", "AKAP12", "TIMP2", "PPL", "S100A4", "SDC4", 
             "MMP7", "LAMA3", "LAMB3", "LAMC2", "PLAUR", "SLC2A1", "TNFAIP2", "RHOF"),
         "epi.fetal-like_EMP1"=c(
-            "CXCL8", "MSLN", "DUSP5", "TM4SF1", "EMP1", "MUC17", "KRT20",
+            "CXCL8", "MSLN", "DUSP5", "TM4SF1", "EMP1", "MUC17",
             "ANXA1", "DUOX2", "DUOXA2", "CD55", "ERO1A", "ECM1", "ENO2", 
             "PFKFB3", "EGLN3", "SERPINE2", "ERRFI1", "CTSE", "COL17A1"),
         "epi.prolif_TACC3"=c(
-            "MKI67", "TOP2A", "DIAPH3", "MYO19", "CHAF1A", "NCAPG2", 
-            "IQGAP3", "KIFC1", "FANCA", "RAD54L", "TROAP", "TACC3",
+            "MKI67", "TOP2A", "MYO19", "NCAPG2", 
+            "IQGAP3", "FANCA", "RAD54L", "TROAP", "TACC3",
             "STMN1", "SUMO3", "TUBA1B", "TUBB4B", 
             "H2AC4", "H1-3", "H1-5", "H3C7", "H2BC15", "CDK1",
             "RARRES1"),

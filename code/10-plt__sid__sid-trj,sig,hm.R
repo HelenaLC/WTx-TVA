@@ -37,14 +37,13 @@ z <- as.matrix(y[, -1])
 rownames(z) <- y[[1]]
 
 # plotting
-lb <- \(.) gsub("^(HALLMARK|GOBP|GAVISH_3CA_MALIGNANT_(METAPROGRAM_)+[0-9]+)_", "", .)
 gg <- ggplot(mu, aes(t, name, fill=value)) + geom_tile() + 
     scale_fill_gradient2(
         "z-scaled\nmean AUCell",
         low="turquoise", high="purple",
         limits=c(-2.5, 2.5), n.breaks=5) +
     geom_vline(xintercept=paste(seq(0.2, 0.8, 0.2)), linewidth=0.1) +
-    scale_y_discrete(position="right", limits=.yo(z), labels=lb) +
+    scale_y_discrete(position="right", limits=.yo(z)) +
     ggtitle(.lab(wcs$x, ncol(sce))) +
     coord_equal(2, expand=FALSE) +
     labs(x="pseudotime", y=NULL) +

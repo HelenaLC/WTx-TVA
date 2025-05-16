@@ -151,7 +151,7 @@ qlt = []
 
 # epithelial trajectors
 qlt_trj_r = "code/10-qlt_trj-{x},{p}.R"
-qlt_trj_p = "plts/trj,{x},{p},{{sid}}.pdf"
+qlt_trj_p = "plts/trj,{x},{p}.pdf"
 foo = glob_wildcards(qlt_trj_r)
 for x,p in zip(foo.x, foo.p):
     qlt += expand(qlt_trj_p, x=x, p=p)
@@ -168,6 +168,7 @@ rule all:
         # setup
         expand([raw, fil, pol], sid=SIP),
         expand([roi, sig, lv1], sid=SIP),
+        expand([lv2], sid="241", sub="epi"),
         # clustering
         expand([pro, ist, pbs], sid=SID),
         # subclustering
@@ -312,15 +313,27 @@ rule lv1:
 	{input[1]} {input[2]} {output}" {input[0]} {log}'''	
 
 # metastasis
-rule lnm:
+rule met:
     priority: 97
-    input:  "code/03-lnm.R",
+    input:  "code/03-met.R",
             "outs/fil-241.rds"
     output: "outs/lv1-241.rds"
-    log:    "logs/lnm.Rout"
+    log:    "logs/met.Rout"
     shell: '''R CMD BATCH\\
     --no-restore --no-save "--args wcs={wildcards}\
     {input[1]} {output}" {input[0]} {log}'''
+rule net:
+    priority: 97
+    input:  "code/04-net.R",
+            "outs/fil-241.rds",
+            "outs/lv1-241.rds",
+            "outs/lv2-242,epi.rds"
+    output: "outs/lv2-241,epi.rds"
+    log:    "logs/net.Rout"
+    shell: '''R CMD BATCH\\
+    --no-restore --no-save "--args wcs={wildcards}\
+    {input[1]} {input[2]} {input[3]}\
+    {output}" {input[0]} {log}'''
 
 # subsetting
 rule sub:
@@ -594,25 +607,30 @@ def out_foo(x):
 # epithelial trajectory
 def xxx(x):
 	if x in ["sub", "jst", "lv2"]:
-		rds = "outs/{x}-{{sid}},{sub}.rds"
+		rds = "outs/{x}-{sid},{sub}.rds"
 	else:
-		rds = "outs/{x}-{{sid}}.rds"
-	return(expand(rds, x=x, sub=SUB))
+		rds = "outs/{x}-{sid}.rds"
+	return(expand(rds, x=x, sid=SID, sub=SUB))
 
 qlt_trj_r = "code/10-qlt_trj-{x},{p}.R"
-qlt_trj_p = "plts/trj,{x},{p},{{sid}}.pdf"
+qlt_trj_p = "plts/trj,{x},{p}.pdf"
 
 foo = glob_wildcards(qlt_trj_r)
 for x,p in zip(foo.x, foo.p):
     rule:
         priority: 7
-        input:  expand(qlt_trj_r, x=x, p=p), trj, fil, z = xxx(x)
-        log:    "logs/qlt_trj-"+x+","+p+",{sid}.Rout"
-        params:	lambda wc, input: pool(input.z)
+        input:  expand(qlt_trj_r, x=x, p=p), 
+                a = xxx("trj"), 
+                b = xxx("fil"), 
+                c = xxx(x)
+        log:    "logs/qlt_trj-"+x+","+p+".Rout"
+        params:	lambda wc, input: pool(input.a),
+                lambda wc, input: pool(input.b),
+                lambda wc, input: pool(input.c)
         output:	expand(qlt_trj_p, x=x, p=p)
         shell: '''R CMD BATCH\
         --no-restore --no-save "--args wcs={wildcards}\
-        {input[1]} {input[2]} {params} {output}" {input[0]} {log}'''
+        {params} {output}" {input[0]} {log}'''
 
 # transition crypts
 foo = glob_wildcards(qlt_tcs_r)

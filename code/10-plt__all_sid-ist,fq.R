@@ -37,8 +37,11 @@ fd <- df |>
 q <- ggplot(fd, aes(kid, n, fill=kid)) +
     geom_col(col="white", linewidth=0.1, width=1, key_glyph="point") +
     scale_y_continuous("number of cells", 
-        limits=c(0, 8e5), breaks=seq(0, 8e5, 2e5), 
-        labels=scales::label_number(scale=1e-3, suffix="k")) +
+        limits=c(0, 1e6), breaks=seq(0, 1e6, 2e5), 
+        labels=scales::label_number(scale=1e-5, suffix="00k")) +
+    geom_text(
+        angle=90, hjust=1, size=1,
+        aes(y=Inf, label=format(n, big.mark=","))) + 
     coord_cartesian(expand=FALSE) +
     theme_bw(6) + theme(
         aspect.ratio=2/3,
@@ -55,7 +58,7 @@ ps <- lapply(list(p, q), \(.) . + theme(
     legend.key.size=unit(0, "lines"),
     legend.text=element_text(size=4),
     legend.background=element_blank()) +
-    scale_fill_manual(NULL, breaks=levels(df$kid), values=.pal) +
+    scale_fill_manual(NULL, breaks=levels(df$kid), values=.pal_kid) +
     guides(fill=guide_legend(override.aes=list(shape=21, stroke=0, size=1.25))))
 
 # saving

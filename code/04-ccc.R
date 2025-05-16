@@ -17,12 +17,13 @@ bp <- MulticoreParam(th)
 
 # loading
 sce <- readRDS(args[[1]])
+sce <- logNormCounts(sce, BPPARAM=bp)
 
-# normalize by area
-cpa <- normalizeCounts(sce,
-    size.factors=sce$Area.um2,
-    center.size.factors=FALSE)
-assay(sce, "cpa") <- cpa
+# # normalize by area
+# cpa <- normalizeCounts(sce,
+#     size.factors=sce$Area.um2,
+#     center.size.factors=FALSE)
+# assay(sce, "cpa") <- cpa
 
 # wrangling
 xy <- grep("global_mm$", names(colData(sce)))
@@ -52,12 +53,10 @@ sr <- bplapply(is, BPPARAM=bp, \(.) {
     tryCatch(error=\(e) e, {
         # skip FOV when there are too few cells
         if (length(.) < 200) return(NULL) 
-        ad <- SCE2AnnData(sce[, .], X_name="cpa")
+        ad <- SCE2AnnData(sce[, .], X_name="logcounts")
         ct$tl$spatial_communication(ad,
             database_name="CellChatDB",
-            # average cell is around 10x10um; here, we set
-            # a distance threshold of 2 cells (20um=.02mm)
-            dis_thr=0.02,  
+            dis_thr=0.05,  
             df_ligrec=db,
             heteromeric=TRUE,
             pathway_sum=TRUE,

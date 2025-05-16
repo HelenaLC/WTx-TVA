@@ -31,16 +31,23 @@ se <- mapply(
 # average by context
 id <- colData(se)["ctx"]
 names(sr) <- sr <- c("s", "r")
-mu <- lapply(sr, \(.) {
-    sf <- summarizeAssayByGroup(se, id, assay.type=., statistics="mean")
-    df <- data.frame(t(assay(sf)), colData(sf), check.names=FALSE)
-    fd <- pivot_longer(df, all_of(rownames(sf)), names_to="lr")
-    fd |> mutate(typ=rowData(se)[fd$lr, "typ"])
-}) |> bind_rows(.id="sr") |>
-    # average sender/receiver
-    group_by(ctx, typ, lr) |>
-    summarise_at("value", mean) |>
-    ungroup()
+
+assay(se, "mu") <- (assay(se, 1)+assay(se, 2))/2 # average sender/receiver
+sf <- summarizeAssayByGroup(se, id, assay.type="mu", statistics="mean") # average by niche
+df <- data.frame(t(assay(sf)), colData(sf), check.names=FALSE)
+fd <- pivot_longer(df, all_of(rownames(sf)), names_to="lr")
+mu <- fd |> mutate(typ=rowData(se)[fd$lr, "typ"])
+
+# mu <- lapply(sr, \(.) {
+#     sf <- summarizeAssayByGroup(se, id, assay.type=., statistics="mean")
+#     df <- data.frame(t(assay(sf)), colData(sf), check.names=FALSE)
+#     fd <- pivot_longer(df, all_of(rownames(sf)), names_to="lr")
+#     fd |> mutate(typ=rowData(se)[fd$lr, "typ"])
+# }) |> bind_rows(.id="sr") |>
+#     # average sender/receiver
+#     group_by(ctx, typ, lr) |>
+#     summarise_at("value", mean) |>
+#     ungroup()
 
 # add inter-context FCs
 cs <- levels(mu$ctx)

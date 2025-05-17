@@ -17,7 +17,10 @@ sce <- sce[, names(which(ist$clust == "epi"))]
 gs <- intersect(rownames(sce), rownames(pbs))
 table(ex <- colSums(counts(sce[gs, ]) > 0) < 20)
 jst <- .ist(sce[, !ex], gs=gs, pbs=pbs, nk=seq(1, 5))
-jst$clust <- factor(jst$clust, colnames(pbs))
+
+# wrangling
+ids <- c(colnames(pbs), intersect(letters, unique(jst$clust)))
+table(jst$clust <- factor(jst$clust, ids))
 
 # saving
 saveRDS(jst, args[[4]])

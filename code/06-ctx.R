@@ -14,6 +14,7 @@ ist <- lapply(args[[2]], readRDS)
 .sid <- \(.) gsub(".*([0-9]{3}).*", "\\1", .)
 jst <- split(ist, .sid(args[[2]]))
 names(sce) <- .sid(args[[1]])
+set.seed(250505)
 
 # neighborhoods
 df <- mapply(x=sce, y=jst, \(x, y) {
@@ -41,9 +42,8 @@ df <- mapply(x=sce, y=jst, \(x, y) {
 df[is.na(df)] <- 0
 
 # clustering
-set.seed(250321)
 fd <- select(df, where(is.numeric))
-km <- kmeans(fd, centers=nk <- 15)$cluster
+km <- kmeans(fd, centers=nk <- 10)$cluster
 df$ctx <- factor(km, labels=paste0("N", seq_len(nk)))
 with(df, table(ctx, sid))
 

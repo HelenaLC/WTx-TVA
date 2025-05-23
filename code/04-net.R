@@ -7,7 +7,7 @@ suppressPackageStartupMessages({
 })
 
 # loading
-set.seed(240512)
+set.seed(240520)
 sce <- readRDS(args[[1]])
 ist <- readRDS(args[[2]])
 pbs <- readRDS(args[[3]])$profiles
@@ -16,11 +16,8 @@ pbs <- readRDS(args[[3]])$profiles
 sce <- sce[, names(which(ist$clust == "epi"))]
 gs <- intersect(rownames(sce), rownames(pbs))
 table(ex <- colSums(counts(sce[gs, ]) > 0) < 20)
-jst <- .ist(sce[, !ex], gs=gs, pbs=pbs, nk=seq(1, 5))
-
-# wrangling
-ids <- c(colnames(pbs), intersect(letters, unique(jst$clust)))
-table(jst$clust <- factor(jst$clust, ids))
+jst <- .ist(sce[, !ex], gs=gs, pbs=pbs, nk=0)
+table(jst$clust <- factor(jst$clust, colnames(pbs)))
 
 # saving
 saveRDS(jst, args[[4]])

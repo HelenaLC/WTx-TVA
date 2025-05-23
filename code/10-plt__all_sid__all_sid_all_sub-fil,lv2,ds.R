@@ -9,6 +9,11 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
+args <- list(
+    list.files("outs", "fil", full.names=TRUE),
+    list.files("outs", "lv2", full.names=TRUE),
+    "plts/fil,lv2,ds.pdf")
+
 # loading
 df <- mapply(SIMPLIFY=FALSE, sce=args[[1]], 
     ist=grep("epi", args[[2]], value=TRUE), 
@@ -32,21 +37,29 @@ df <- mapply(SIMPLIFY=FALSE, sce=args[[1]],
 
 # wrangling
 fd <- df |>
-    filter(kid != "", !is.na(n)) |> 
-    group_by(sid) |> mutate(m=.z(n)) |>
+    filter(kid != "", !is.na(n))
+
+# downsample to similar number of
+# cells per section-subpopulation
+fd <- by(fd, fd$kid, \(a) {
+    n <- 1e4
+    by(a, a$sid, \(b) {
+        b[sample(nrow(b), min(nrow(b), 1e4)), ]
+    }) |> do.call(what=rbind)
+}) |> do.call(what=rbind) |>
+    mutate(m=.z(n)) |>
     mutate(kid=gsub("^epi\\.", "", kid))
 
 # plotting
 gg <- ggplot(fd,
-    aes(reorder_within(kid, m, sid, median), m, fill=kid)) + 
+    aes(reorder(kid, m, median), m, fill=kid)) + 
     geom_boxplot(
         outlier.shape=16, outlier.size=0.2, outlier.stroke=0,
         key_glyph="point", show.legend=TRUE, alpha=2/3, linewidth=0.2) +
     labs(x=NULL, y="cellular density (50um radius)") +
     scale_fill_manual(NULL, drop=FALSE, values=.pal_kid) +
-    facet_wrap(~sid, nrow=2, scales="free_x") +
+    scale_y_continuous(n.breaks=6, limits=c(-2.5, 2.5)) +
     geom_hline(yintercept=0, linewidth=0.2) +
-    scale_y_continuous(n.breaks=6) +
     scale_x_reordered() +
     .thm_fig_d("bw", "f") + theme(
         axis.text.x=element_blank(),
@@ -55,4 +68,4 @@ gg <- ggplot(fd,
         strip.background=element_blank())
 
 # saving
-ggsave(args[[3]], gg, unit="cm", width=12, height=5)
+ggsave(args[[3]], gg, unit="cm", width=6, height=5)

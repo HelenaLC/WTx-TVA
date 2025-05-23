@@ -1,9 +1,3 @@
-args <- list(
-   list.files("outs", "ctx-", full.names=TRUE),
-   list.files("outs", "roi-", full.names=TRUE),
-   "plts/ctx,roi,fq.pdf")
-args <- lapply(args, \(.) grep("241", ., value=TRUE, invert=TRUE))
-
 # dependencies
 suppressPackageStartupMessages({
     library(dplyr)

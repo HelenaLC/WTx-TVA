@@ -11,22 +11,42 @@
 
 ## steps
 
+**data setup**
+
 - `01-raw.R`
   - read flat files as `SingleCellExperiment`
   - stash non-RNA targets as `altExps`
   - write out as *.h5*-backed object
-  
+
+**quality control**
+
 - `02-fil.R`
   - exclude cells too close to any FOV border
   - exclude cells with low counts, low counts per area,  
   and high negative probe or false code count
-  
+
+**metadata**
+
+- `03-pol.R`
+  - read polygon data from *.csv*
+  - filter for cells passing QC 
+  - write to *.parquet*
+- `03-roi.R`
+  - retrieve Napari-based  shape annotations
+    - histopathological regions (REV/TVA/CRC)
+    - invasion-free blood vessels (BV)
+    - lymphovascular invarsions (LI)
+  - align coordinates with CosMx data
+  - stash annotations as cell metadata
+
+**clustering**  
+
 - `03-ist.R`:  
 `InSituType` clustering supervised by reference profiles  
 extracted from (pooled) snPATHO-seq data on adjacent sections
-  
+
 - `04-sub.R`: subset cells into epi(thelia), imm(unne), (str)mal
-  
+
 - `05-jst.R`:  
 `InSituType` subclustering (analogous to above),  
 using distinct references profiles for each subset

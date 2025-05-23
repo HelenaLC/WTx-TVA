@@ -39,9 +39,10 @@ using distinct references profiles for each subset
     - `03-pro.R` and `05-rep.R`: PCA using feature subset  
     according to `03-ist.R` and `05-jst.R`, respectively
     - `03-sig.R`: gene set signature scoring
-    - `04-ccc.R`: cell cell-communication
-    - `06-ctx.R`: spatial contexts/niches
-    - `06-trj.R`: trajectory inference
+    - `04-ccc.R`: cell cell-communication analysis
+    - `06-trj.R`: epithelial trajectory inference
+    - `06-ctx.R`: spatial context/niche analysis
+    - `06-cty.R`: niches blinded to epithelia
 
 - `10-plt__<by1>__<by2>-<out1>,<out2>,<plt>.R`
   - pool outputs `<out1/2>` according to `<by1/2>`  

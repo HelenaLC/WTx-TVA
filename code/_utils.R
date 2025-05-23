@@ -11,7 +11,8 @@
     "CRC2"="indianred")
 .pal_sub <- c(epi="gold2", imm="cyan2", str="magenta2")
 .pal_kid <- unname(pals::trubetskoy())
-.pal_ctx <- unname(pals::cols25())
+.pal_ctx <- unname(pals::kelly())
+.pal_ctx[c(1,8)] <- c("grey90", .pal_ctx[12])
 .pal_sid <- c(
     "#FB8072", "#7BAFDE", "#BEAED4", "#FDB462", 
     "#E78AC3", "#B2DF8A", "#8DD3C7", "#d4b7b7")
@@ -60,6 +61,10 @@
     x[x > 1] <- 1
     return(x)
 }
+
+# hierarchical clustering
+.xo <- \(.) rownames(.)[hclust(dist(.))$order]
+.yo <- \(.) colnames(.)[hclust(dist(t(.)))$order]
 
 # prettified plot title in the style of
 # 'title (N = count)' with bold 'title'
@@ -855,34 +860,3 @@ suppressPackageStartupMessages({
         panel.background=element_rect(color="grey", fill=NA)))
 .thm_xy_d <- \(s=0.1) c(.thm_fig_d("void"), .thm_xy(s))
 .thm_xy_c <- \(s=0.1) c(.thm_fig_c("void"), .thm_xy(s))
-
-.theme_w <- theme(
-    panel.grid=element_blank(),
-    strip.background=element_blank(),
-    legend.key.size=unit(0.5, "lines"))
-
-.theme_white <- 
-    theme_linedraw(6) + .theme_w + theme(
-        strip.text=element_text(color="black"))
-
-.theme_white_void <- theme_void(6) + .theme_w
-
-.xo <- \(.) rownames(.)[hclust(dist(.))$order]
-.yo <- \(.) colnames(.)[hclust(dist(t(.)))$order]
-
-.theme_fig_void <- theme(
-    panel.grid=element_blank(),
-    plot.margin=margin(2,2,2,2),
-    plot.background=element_blank(),
-    panel.background=element_blank(),
-    legend.key=element_blank(),
-    legend.background=element_blank(),
-    legend.key.size=unit(0.2, "lines"),
-    plot.title=element_text(size=4, color="black"),
-    legend.text=element_text(size=3, color="black"),
-    legend.title=element_text(size=3, color="black"),
-    strip.text=element_text(size=4, color="black", margin=margin(1,1,1,1)))
-
-.theme_fig <- .theme_fig_void + theme(
-    axis.text=element_text(size=3, color="black"),
-    axis.title=element_text(size=4, color="black"))

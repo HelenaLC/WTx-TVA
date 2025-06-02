@@ -68,13 +68,13 @@ using distinct references profiles for each subset
   
 **downstream analyses**
 
-    - `03-pro.R` and `05-rep.R`: PCA using feature subset  
-    according to `03-ist.R` and `05-jst.R`, respectively
-    - `03-sig.R`: gene set signature scoring
-    - `04-ccc.R`: cell cell-communication analysis
-    - `06-trj.R`: epithelial trajectory inference
-    - `06-ctx.R`: spatial context/niche analysis
-    - `06-cty.R`: niches blinded to epithelia
+- `03-pro.R` and `05-rep.R`: PCA using feature subset  
+  according to `03-ist.R` and `05-jst.R`, respectively
+- `03-sig.R`: gene set signature scoring
+- `04-ccc.R`: cell cell-communication analysis
+- `06-trj.R`: epithelial trajectory inference
+- `06-ctx.R`: spatial context/niche analysis
+- `06-cty.R`: niches blinded to epithelia
 
 **visualization**
 

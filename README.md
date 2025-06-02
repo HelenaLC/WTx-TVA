@@ -4,10 +4,10 @@
 
 - this repository is file size-limit; any data beyond KBs are omitted
 - let `<x>` denote a slide identifier (run 1: 11,12; run 2: 21,22,23,24)
-  - Zarr stores of IF stains should be located at `imgs/<x>/images/`
-  - flat files should be located at `data/raw/<x>/`
-- in addition, snPATHO-seq un/filtered barcodes should be  
-  located at `data/ref/raw` and `data/ref/fil`, respectively
+  - Zarr stores of IF stains should be at `imgs/<x>/images/`
+  - corresponding flat files should be at `data/raw/<x>/`
+- in addition, snPATHO-seq un- and filtered barcodes
+  should be at `data/ref/raw` and `-/fil`, respectively
 - Gut Cell Atlas reference data should be at `data/gca.rds`
   (retrievable from https://www.gutcellatlas.org/)
 

@@ -66,7 +66,8 @@ using distinct references profiles for each subset
 `03-ist.R` outputs (automated; using `meta/lab/lv1.json`), and  
 `05-jst.R` outputs (manual; using `meta/lab/lv2,<sub>.json`)
   
-- downstream analyses
+**downstream analyses**
+
     - `03-pro.R` and `05-rep.R`: PCA using feature subset  
     according to `03-ist.R` and `05-jst.R`, respectively
     - `03-sig.R`: gene set signature scoring
@@ -75,6 +76,10 @@ using distinct references profiles for each subset
     - `06-ctx.R`: spatial context/niche analysis
     - `06-cty.R`: niches blinded to epithelia
 
+**visualization**
+
+- majority of scripts serve the purpose of collecting  
+  specific subsets of results, and visualizing them
 - `10-plt__<by1>__<by2>-<out1>,<out2>,<plt>.R`
   - pool outputs `<out1/2>` according to `<by1/2>`  
   - generates `plts/<out1>,<out2>,<plt>.pdf`  

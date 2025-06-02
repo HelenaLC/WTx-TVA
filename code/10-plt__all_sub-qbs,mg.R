@@ -8,13 +8,16 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
+args <- list(
+    list.files("outs", "qbs-", full.names=TRUE),
+    "plts/qbs,mg.pdf")
+
 # loading
 sub <- gsub(".*(epi|imm|str).*", "\\1", args[[1]])
-sce <- lapply(setNames(args[[1]], sub), \(.)
-    (sce <- readRDS(.))[, sce$sid == "all"])
+sce <- lapply(setNames(args[[1]], sub), readRDS)
 
 # restrict to selected features
-gs <- list(
+mgs <- list(
     epi=list(
         "epi.EE"=c("PYY", "SST", "CHGA", "CHGB", "NEUROD1", "GCG", "INSL5"),
         "epi.goblet"=c("BEST2", "MUC2", "MUC4", "TFF3", "FCGBP", "ZG16", "ATOH1", "KLK1", "CLCA1", "ITLN1"),
@@ -81,45 +84,69 @@ gs <- list(
     )
 )
 
-lapply(gs, \(.) unlist(.)[duplicated(unlist(.))])
+lapply(mgs, \(.) unlist(.)[duplicated(unlist(.))])
+
+# aesthetics
+aes <- list(
+    geom_tile(), 
+    coord_equal(4/3, expand=FALSE),
+    .thm_fig_c("minimal"), theme(
+        axis.ticks=element_blank(),
+        axis.title=element_blank(),
+        legend.key.width=unit(0.2, "lines"),
+        legend.key.height=unit(0.4, "lines"),
+        axis.text.y=element_text(size=4),
+        axis.text.x=element_text(size=3, angle=90, hjust=1, vjust=0.5)),
+    scale_fill_gradient2(
+        "z-scaled\nmean expr.", 
+        low="dodgerblue2", high="tomato2",
+        limits=c(-2.5, 2.5), breaks=seq(-2, 2, 2)))
 
 ps <- lapply(sub, \(.) {
-    sce <- sce[[.]]
-    gs <- gs[[.]]
-    # wrangling
-    y <- t(logcounts(sce[unlist(gs), ]))
-    df <- data.frame(y, k=sce$kid, check.names=FALSE)
+    se <- sce[[.]]
+    gs <- mgs[[.]]
+    ns <- cumsum(sapply(gs, length))
+    ns <- unique(ns); ns <- ns[-length(ns)]
+    # joint
+    x <- se[, se$sid == "all"]
+    y <- t(logcounts(x[unlist(gs), ]))
+    df <- data.frame(y, k=x$kid, check.names=FALSE)
     fd <- df |>
         pivot_longer(-k, names_to="g", values_to="y") |>
         group_by(g) |> mutate_at("y", .z) |>
         mutate_at("k", factor, rev(names(gs))) |>
         mutate_at("g", factor, unlist(gs))
-    # plotting
-    ns <- cumsum(sapply(gs, length))
-    ggplot(fd, aes(g, k, fill=y)) +
-        geom_tile() + coord_equal(4/3, expand=FALSE) +
+    p <- ggplot(fd, aes(g, k, fill=y)) + aes +
         geom_vline(xintercept=ns+0.5, linewidth=0.2) +
-        scale_fill_gradient2(
-            "z-scaled\nmean expr.",
-            low="dodgerblue2", high="tomato2",
-            limits=c(-2.5, 2.5), breaks=seq(-2, 2, 2)) +
-        (if (. == "epi") scale_y_discrete(
-            labels=\(.) gsub("^epi\\.", "", .))) +
-        .thm_fig_c("minimal") + theme(
-            axis.ticks=element_blank(),
-            axis.title=element_blank(),
-            legend.key.width=unit(0.2, "lines"),
-            legend.key.height=unit(0.4, "lines"),
-            axis.text.y=element_text(size=4),
-            axis.text.x=element_text(size=3, angle=90, hjust=1, vjust=0.5))
-})
+        (if (. == "epi") scale_y_discrete(labels=\(.) gsub("^epi\\.", "", .)))
+    # split
+    x <- se[, se$sid != "all"]
+    y <- t(logcounts(x[unlist(gs), ]))
+    df <- data.frame(y, s=x$sid, k=x$kid, check.names=FALSE)
+    df <- mutate(df, across(where(is.numeric), .z))
+    q <- by(df, df$k, \(fd) {
+        k <- fd$k[1]
+        fd <- fd |>
+            select(-k) |>
+            pivot_longer(-s, names_to="g", values_to="y") |>
+            mutate_at("g", factor, unlist(gs))
+        # plotting
+        hl <- c("plain", "bold")[1 + fd$g %in% gs[[k]]]
+        ggplot(fd, aes(g, s, fill=y)) + aes + ggtitle(k) +
+            geom_vline(xintercept=ns+0.5, linewidth=0.2) +
+            scale_y_discrete(limits=\(.) rev(.)) + guides(fill="none") +
+            theme(axis.text.x=element_text(size=3, angle=90, hjust=1, vjust=0.5, face=hl))
+    })
+    c(list(p), q)
+}) |> Reduce(f=c)
 
 # saving
 tf <- replicate(length(ps), tempfile(fileext=".pdf"), FALSE)
 for (. in seq_along(ps)) {
     df <- (p <- ps[[.]])$data
-    w <- length(unique(df$g))/10+max(nchar(paste(df$k)))/5
-    h <- length(unique(df$k))/10+max(nchar(paste(df$g)))/5
+    y <- ifelse(is.null(df$k), "s", "k")
+    w <- length(unique(df$g))/10+max(nchar(paste(df[[y]])))/5
+    h <- length(unique(df[[y]]))/10+max(nchar(paste(df$g)))/5
     pdf(tf[[.]], width=(2+w)/2.54, height=(0.5+h)/2.54)
     print(p); dev.off()
 }

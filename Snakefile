@@ -46,6 +46,7 @@ roi = "outs/roi-{sid}.rds"
 pol = "outs/pol-{sid}.parquet"
 # downstream
 ctx = "outs/ctx-{sid}.rds"
+cty = "outs/cty-{sid}.rds"
 ccc = "outs/ccc-{sid}.rds"
 pro = "outs/pro-{sid}.rds"
 sig = "outs/sig-{sid}.rds"
@@ -175,9 +176,11 @@ rule all:
         expand([sub, jst, lv2, qbs, mgs], sid=SID, sub=SUB),
         expand([kst, qbt, req], sid=SID),
         # downstream
-        expand([ctx, ccc, rep, trj], sid=SID),
+        expand([ctx, cty, ccc, rep, trj], sid=SID),
         # visualization
-        expand(plt + qlt, sid=SID)
+        expand(plt + qlt, sid=SID),
+        # collection
+        expand("outs/res-{sid}", sid=SID)
 
 # analysis =========================================
 
@@ -437,18 +440,20 @@ rule mgs:
 	{params} {output} ths={threads}" {input[0]} {log}'''
 
 # contexts
-rule ctx:
-	priority: 95
-	input:	"code/06-ctx.R", 
-			x = expand(fil, sid=SID),
-			y = expand(jst, sid=SID, sub=SUB)
-	params:	lambda wc, input: pool(input.x),
-			lambda wc, input: pool(input.y)
-	output:	expand(ctx, sid=SID)
-	log:    "logs/ctx.Rout"
-	shell: '''R CMD BATCH\\
-	--no-restore --no-save "--args wcs={wildcards}\
-	{params[0]} {params[1]} {output}" {input[0]} {log}'''	
+for foo in ["ctx", "cty"]:
+    rule:
+        priority: 95
+        name:   foo
+        input:	"code/06-%s.R" % foo,
+                x = expand(fil, sid=SID),
+                y = expand(jst, sid=SID, sub=SUB)
+        params:	lambda wc, input: pool(input.x),
+                lambda wc, input: pool(input.y)
+        output:	expand({"ctx": ctx, "cty": cty}[foo], sid=SID)
+        log:    "logs/%s.Rout" % foo
+        shell: '''R CMD BATCH\\
+        --no-restore --no-save "--args wcs={wildcards}\
+        {params[0]} {params[1]} {output}" {input[0]} {log}'''	
 
 # reprocessing
 rule rep:
@@ -485,6 +490,21 @@ rule req:
 	shell: '''R CMD BATCH\\
 	--no-restore --no-save "--args wcs={wildcards}\
 	{input[1]} {input[2]} {output} ths={threads}" {input[0]} {log}'''
+
+# collection
+rule res:
+    priority: 90
+    input:  "code/09-res.R", "outs/raw-{sid}",
+            expand("outs/{out}-{{sid}}.rds", 
+                out=["fil", "roi", "cty", "trj", 
+                "pro", "rep", "ist", "lv1"]),
+            expand("outs/{out}-{{sid}},{sub}.rds", 
+                out=["jst", "lv2"], sub=SUB)
+    output: directory("outs/res-{sid}")
+    log:    "logs/res-{sid}.Rout"
+    shell: '''R CMD BATCH\\
+    --no-restore --no-save "--args wcs={wildcards}\
+    {input} {output}" {input[0]} {log}'''
 
 # plotting =========================================
 

@@ -3,9 +3,10 @@
 ## setup
 
 - this repository is a file size-limit version; any large data are omitted
-- let `<did>` denote a section identifier (here, `d` stems from "dataset")
-  - Zarr stores of IF stains should be located at `imgs/<did>/images/`
-  - flat files should be located at `data/raw/<sid>/`
+- let `<x>` denote a slide identifier  
+  (1st run: 11, 12; 2nd run: 21, 22, 23, 24)
+  - Zarr stores of IF stains should be located at `imgs/<x>/images/`
+  - flat files should be located at `data/raw/<x>/`
 
 ## notes
 

@@ -2,6 +2,13 @@
 
 ## setup
 
+- this repository is a file size-limit version; any large data are omitted
+- let `<did>` denote a section identifier (here, `d` stems from "dataset")
+  - Zarr stores of IF stains should be located at `imgs/<did>/images/`
+  - flat files should be located at `data/raw/<sid>/`
+
+## notes
+
 - R version and library have are specified in the `config.yaml` file  
   (e.g., `R: "R_LIBS_USER=/path/to/library /path/to/R/executable"`)
 - `.Rprofile` is used for handling command line arguments

@@ -6,7 +6,7 @@
 - let `<x>` denote a slide identifier (run 1: 11,12; run 2: 21,22,23,24)
   - Zarr stores of IF stains should be at `imgs/<x>/images/`
   - corresponding flat files should be at `data/raw/<x>/`
-- in addition, snPATHO-seq un- and filtered barcodes
+- in addition, snPATHO-seq un- and filtered barcodes  
   should be at `data/ref/raw` and `-/fil`, respectively
 - Gut Cell Atlas reference data should be at `data/gca.rds`  
   (it can be retrieved from https://www.gutcellatlas.org/)

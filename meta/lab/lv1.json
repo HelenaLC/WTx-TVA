@@ -1,0 +1,5 @@
+{
+	"epi": ["epi1","epi2","epi3","epi4"],
+	"imm": ["PC_IgA","PC_IgG","PC_IgM","BC","TC","mast","mye1", "mye2"],
+	"str": ["SMC","EC","fib1", "fib2"]
+}

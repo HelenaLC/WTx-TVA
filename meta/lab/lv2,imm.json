@@ -1,0 +1,16 @@
+{
+    "B.activated":["Bm"],
+    "B.naive":["Bn"],
+    "Tc":["Tc"],
+    "Th":["Th"],
+    "mast":["mast"],
+    "neutrophil":["nphil"],
+    "TAM":["macro1"],
+    "PVM":["macro2"],
+    "cDC":["cDC1"], 
+    "DC.lymphoid":["cDC2_CCR7"],
+    "PC_IgA1":["PC_IgA1"], 
+    "PC_IgD":["PC_IgA2"],
+    "PC_IgG":["PC_IgG"], 
+    "PC_IgM":["PC_IgM"]
+}

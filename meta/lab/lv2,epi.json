@@ -1,0 +1,18 @@
+{
+  "epi.EE":["epi.EE"],
+  "epi.entero":["epi.entero"],
+  "epi.goblet":["epi.goblet"],
+  "epi.fetal-like_EMP1":["epi.stress"],
+  "epi.paneth-like_DEFA6":["epi.paneth-like"],
+  "epi.stem-like_LGR5":["epi_LGR5"],
+  "epi.entero-like_ACSF2":["epi_MSLN"],
+  "epi.goblet-like_REG4":["epi_MUC5AC"],
+  "epi.entero-like_EREG":["epi_DNMT1"],
+  "epi.stem-like_CLU":["epi_LEFTY1"],
+  "epi.inflam_REG1A":["epi_REG/DUOX"],
+  "epi.fetal-like_MMP7":["epi_KLK10/CLDN2"],
+  "epi.prolif_TACC3":["epi.1"],
+  "epi.prolif_H1":["epi.2"], 
+  "epi.prolif":["epi.3"],
+  "epi.prolif_STMN1":["epi.4"]
+}

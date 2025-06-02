@@ -1,0 +1,15 @@
+{   
+    "BEC":["BEC"], 
+    "LEC":["LEC"],
+    "SMC/fib.myo":["SMC"],
+    "CAF_F3":["CAF_F3"],
+    "pericytes":["CAF_NOTCH3"],
+    "CAF.myo_FAP":["CAF_CTHRC1"],
+    "fib_PI16":["fib_PI16"],
+    "fib_JUN/FOS":["fib_NR4A1"],
+    "fib_C7":["fib_PDGFRA"],
+    "fib_ADAMDEC1":["fib_ADAM"],
+    "fib.TLS":["fib.TLS"],
+    "IAF_MMP":["IAF_MMP"],
+    "CAF":["fib"]
+}

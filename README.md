@@ -8,8 +8,8 @@
   - corresponding flat files should be at `data/raw/<x>/`
 - in addition, snPATHO-seq un- and filtered barcodes
   should be at `data/ref/raw` and `-/fil`, respectively
-- Gut Cell Atlas reference data should be at `data/gca.rds`
-  (retrievable from https://www.gutcellatlas.org/)
+- Gut Cell Atlas reference data should be at `data/gca.rds`  
+  (it can be retrieved from https://www.gutcellatlas.org/)
 
 ## notes
 

@@ -86,7 +86,7 @@ using distinct references profiles for each subset
   (depending on `<by1/2>`, name may also include  
   subset (`sub`) or section (`sid`) identifier)
     - `sid` = one section
-    - `all_sid` = all sections
+    - `all_sid` = all colon sections
     - `all_sip` = also include LN (241)
     - `all_sid_all_sub` = all sections and subsets
     

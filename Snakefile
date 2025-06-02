@@ -71,6 +71,13 @@ qbt = "outs/qbt.rds"
 # plotting
 plt = []
 
+# one
+pdf = "plts/{out},{plt}.pdf"
+foo = "code/10-plt__one-{a},{p}.R"
+bar = glob_wildcards(foo)
+for a,p in zip(bar.a, bar.p):
+    plt += expand(pdf, out=a, plt=p)
+
 # raw
 plt_raw = "plts/raw/raw,{out2},{plt},{sid}.pdf"
 plt_raw_ = "plts/raw/raw,{out2},{plt},{{sid}}.pdf"
@@ -507,6 +514,15 @@ rule res:
     {input} {output}" {input[0]} {log}'''
 
 # plotting =========================================
+
+rule plt_one:
+	priority: 99
+	input:	"10-plt__one-{out},{plt}.R", "outs/{out}.rds"
+	log:	"logs/plt__one-{out},{plt}.Rout"
+	output: "plts/{out},{plt}.pdf"
+	shell: '''R CMD BATCH\
+	--no-restore --no-save "--args wcs={wildcards}\
+	{input[1]} {output}" {input[0]} {log}'''
 
 rule plt_raw:
 	priority: 9

@@ -2,7 +2,8 @@
 
 ## setup
 
-- this repository is a file size-limit version; any large data are omitted
+- this repository is file size-limit version,  
+  i.e., any data beyond KBs are omitted
 - let `<x>` denote a slide identifier (run 1: 11,12; run 2: 21,22,23,24)
   - Zarr stores of IF stains should be located at `imgs/<x>/images/`
   - flat files should be located at `data/raw/<x>/`

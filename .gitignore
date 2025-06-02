@@ -1,11 +1,12 @@
 _*/
 figs/
 imgs/
-meta/
 data/*
 plts/*
 outs/*
 logs/*
+meta/cnv
+meta/sig/*json
 code/11-*
 !**/*.R
 !**/*.qmd

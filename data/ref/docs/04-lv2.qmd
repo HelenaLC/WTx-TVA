@@ -66,7 +66,7 @@ str <- c(
 setdiff(unique(lys$str$kid), names(str))
 epi <- c(
     a="epi.goblet", 
-    b="epi.MUC5AC",
+    b="epi_MUC5AC",
     c="epi_MSLN",
     d=NA,
     e="epi.EE",
@@ -76,13 +76,13 @@ epi <- c(
     i="epi.3",
     j="epi.paneth-like",
     k="epi_KLK10/CLDN2",
-    l="epi.LGR5",
-    m="epi.MUC5AC",
+    l="epi_LGR5",
+    m="epi_MUC5AC",
     n="epi.4",
     o="epi_LEFTY1",
     p="epi.stress",
     q="epi_DNMT1",
-    r="epi.REG/DUOX")
+    r="epi_REG/DUOX")
 setdiff(unique(lys$epi$kid), names(epi))
 
 lab <- list(epi=epi, imm=imm, str=str)

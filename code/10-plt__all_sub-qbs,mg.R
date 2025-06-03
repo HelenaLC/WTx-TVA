@@ -8,10 +8,6 @@ suppressPackageStartupMessages({
     library(SingleCellExperiment)
 })
 
-args <- list(
-    list.files("outs", "qbs-", full.names=TRUE),
-    "plts/qbs,mg.pdf")
-
 # loading
 sub <- gsub(".*(epi|imm|str).*", "\\1", args[[1]])
 sce <- lapply(setNames(args[[1]], sub), readRDS)
@@ -62,7 +58,7 @@ mgs <- list(
         DC.lymphoid=c("CD40", "CD83", "CCR7", "IDO1", "FSCN1", "ID2", "IRF4", "IRF8", "LAMP3"),
         cDC=c("CLEC10A", "CD1C", "ITGAM", "CX3CR1", "ITGAX"),
         neutrophil=c("IL1B", "S100A8", "S100A9", "MMP9"),
-        TAM=c("HLA-DPA1", "HLA-DRB1", "CD4", "C1QA", "C1QB", "C1QC", "CD14", "CD68", "APOE", "APOC1", "CTSD", "SPP1", "CCR2", "CCL2", "MARCO", "IL10"),
+        TAM=c("HLA-DPA1", "HLA-DRB1", "CD4", "C1QA", "C1QB", "C1QC", "CD14", "CD68", "APOE", "APOC1", "CTSD", "SPP1", "CCL2", "MARCO"),
         PVM=c("CD163", "CD209", "MS4A4E", "MS4A7", "STAB1", "SELENOP", "SIGLEC1", "MRC1", "LYVE1", "CCL18")
     ),
     str=list(
@@ -78,9 +74,9 @@ mgs <- list(
         "fib_JUN/FOS"=c("NR4A1", "EGR1", "CCN1", "JUN", "FOS", "FOSB", "DUSP1"),
         fib_ADAMDEC1=c("ADAMDEC1", "ADAM28", "ABCA8", "HAAO", "BMP5", "FGFR4", "SCARA5"),
         fib_PI16=c("OGN", "PTGIS", "SFRP1", "SFRP2", "CFD", "GSN", "PI16", "MFAP5", "IGFBP6", "PLA2G2A"),
-        IAF_MMP=c("MMP1", "MMP3", "MMP10", "MMP19", "CXCL1", "CXCL5", "CXCL8", "SMOX", "AREG", "IL11", "HIF1A"),
+        IAF_MMP=c("MMP1", "MMP3", "MMP10","MMP19", "CXCL1", "CXCL5", "CXCL8", "SMOX", "AREG", "IL11", "HIF1A"),
         CAF_F3=c("PDGFRA", "COL4A5", "CXCL14", "F3", "SOX6", "WNT4", "WNT5A"),
-        CAF.myo_FAP=c("CTHRC1", "FN1", "FAP", "COMP", "SFRP4", "SULF1", "SULF2", "CDH11", "COL1A1", "COL1A2", "COL10A1", "COL11A1", "COL12A1")
+        CAF.myo_FAP=c("MMP2",  "MMP11", "MMP14", "CTHRC1", "FN1", "FAP", "COMP", "SFRP4", "SULF1", "SULF2", "CDH11", "COL1A1", "COL1A2", "COL10A1", "COL11A1", "COL12A1", "LOXL2")
     )
 )
 

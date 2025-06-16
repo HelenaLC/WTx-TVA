@@ -503,8 +503,8 @@ rule res:
     priority: 90
     input:  "code/09-res.R", "outs/raw-{sid}",
             expand("outs/{out}-{{sid}}.rds", 
-                out=["fil", "roi", "cty", "trj", 
-                "pro", "rep", "ist", "lv1"]),
+                out=["fil", "roi", "sig", "ccc", "cty", 
+                    "trj", "pro", "rep", "ist", "lv1"]),
             expand("outs/{out}-{{sid}},{sub}.rds", 
                 out=["jst", "lv2"], sub=SUB)
     output: directory("outs/res-{sid}")

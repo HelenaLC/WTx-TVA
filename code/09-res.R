@@ -1,8 +1,9 @@
 # args <- list(
-#     "outs/raw-232/se.rds", "outs/fil-232.rds",
-#     "outs/roi-232.rds", "outs/pro-232.rds", 
-#     "outs/cty-232.rds", "outs/trj-232.rds",
+#     "outs/raw-232", "outs/fil-232.rds",
+#     "outs/roi-232.rds", "outs/pro-232.rds",
 #     "outs/ist-232.rds", "outs/lv1-232.rds",
+#     "outs/sig-232.rds", "outs/ccc-232.rds",
+#     "outs/cty-232.rds", "outs/trj-232.rds",
 #     list.files("outs", "rep-232", full.names=TRUE),
 #     list.files("outs", "jst-232", full.names=TRUE),
 #     list.files("outs", "lv2-232", full.names=TRUE))
@@ -10,6 +11,7 @@
 # dependencies
 suppressPackageStartupMessages({
     library(Matrix)  
+    library(AUCell)  
     library(HDF5Array)  
     library(slingshot)  
     library(alabaster.sce)  
@@ -37,6 +39,26 @@ roi <- readRDS(grep("roi", args, value=TRUE))
 idx <- match(colnames(sce), colnames(roi))
 cd <- colData(roi)[idx, c("typ", "roi")]
 colData(sce) <- cbind(colData(sce), cd)
+
+# signature scores
+sig <- readRDS(grep("sig", args, value=TRUE))
+idx <- match(colnames(sce), colnames(sig))
+sig <- `colnames<-`(sig[, idx], colnames(sce))
+assay(sig) <- as(assay(sig), "dgCMatrix")
+altExp(sce, "AUCell") <- sig
+
+# cell-cell communication
+ccc <- readRDS(grep("ccc", args, value=TRUE))
+names(ccc) <- c("sender", "receiver")
+ccc <- lapply(ccc, \(.) {
+    mtx <- as.matrix(.)
+    mty <- t(mtx[!rowAlls(as.matrix(is.na(mtx))), ])
+    idx <- match(colnames(sce), colnames(mty))
+    mty <- as(mty[, idx], "dgCMatrix")
+    `colnames<-`(mty, colnames(sce))
+}) 
+ccc <- SingleCellExperiment(ccc)
+altExp(sce, "COMMOT") <- ccc
 
 # spatial contexts
 ctx <- readRDS(grep("cty", args, value=TRUE))

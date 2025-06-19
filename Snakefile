@@ -186,7 +186,7 @@ rule inf:
     input:	"code/09-inf.R"
     output:	"inf.txt"
     log:	"logs/inf.Rout" 
-    shell:	'''{R} CMD BATCH\\
+    shell:	'''R CMD BATCH\\
     --no-restore --no-saves "--args\\
     {output}" {input} {log}'''
 

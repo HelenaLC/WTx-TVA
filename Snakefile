@@ -145,14 +145,6 @@ foo = glob_wildcards("code/10-plt__sid_sub__sid_sub-{x},{y},{z}.R")
 for x,y,z in zip(foo.x, foo.y, foo.z):
 	plt += expand(pdf, out1=x, out2=y, plt=z)
 
-#pat = re.compile(r'^((?!trj).)*$')
-#plt = [p for p in plt if pat.match(p)]
-#qlt = [q for q in qlt if pat.match(q)]
-
-# pat = re.compile(r'^.*kst.*$')
-# qlt = [p for p in plt if pat.match(p)]
-# plt += expand(qlt, sid=SID, sub="epi")
-
 # visuals that require so many inputs, 
 # they don't fit with the above schema...
 qlt = []
@@ -188,6 +180,15 @@ rule all:
         expand(plt + qlt, sid=SID),
         # collection
         expand("outs/res-{sid}", sid=SID)
+
+# write session info to .txt file
+rule inf:
+    input:	"code/09-inf.R"
+    output:	"inf.txt"
+    log:	"logs/inf.Rout" 
+    shell:	'''{R} CMD BATCH\\
+    --no-restore --no-saves "--args\\
+    {output}" {input} {log}'''
 
 # analysis =========================================
 

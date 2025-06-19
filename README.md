@@ -10,6 +10,8 @@
   should be at `data/ref/raw` and `-/fil`, respectively
 - Gut Cell Atlas reference data should be at `data/gca.rds`  
   (it can be retrieved from https://www.gutcellatlas.org/)
+- Package  versions used throughout this study are
+  captured in the session information [here](inf.txt)
 
 ## notes
 

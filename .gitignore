@@ -5,6 +5,9 @@ imgs/**/images/*
 !imgs/**/images/.gitkeep
 data/raw/**/*gz
 data/raw/**/*png
+data/ref/outs/*rds
+data/ref/data/raw/*
+data/ref/data/fil/*
 plts/*
 outs/*
 logs/*

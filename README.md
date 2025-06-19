@@ -10,15 +10,13 @@
   should be at `data/ref/raw` and `-/fil`, respectively
 - Gut Cell Atlas reference data should be at `data/gca.rds`  
   (it can be retrieved from https://www.gutcellatlas.org/)
-- A complete list of package dependencies (as well as  
-  installation commands) are provided in `code/09-inf.R`
-- Package  versions used throughout this study are  
-  captured in the session information [here](inf.txt)
 
 ## notes
 
-- R version and library have are specified in the `config.yaml` file  
-  (e.g., `R: "R_LIBS_USER=/path/to/library /path/to/R/executable"`)
+- Software  versions used throughout this study are  
+  captured in the session information [here](inf.txt)
+- A complete list of package dependencies (as well as  
+  installation commands) are provided in `code/09-inf.R`
 - `.Rprofile` is used for handling command line arguments
 - `logs/` capture `.Rout` files from `R CMD BATCH` executions
 - intermediate results are written to `outs/` (as *.rds*)

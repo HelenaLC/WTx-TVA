@@ -1,4 +1,11 @@
-# WTx-CosMx SMI on TVA/CRC
+# Code to: Tracing colorectal <br/> malignancy transformation <br/> from cell to tissue scale
+
+Helena L. Crowell, Irene Ruano, Zedong Hu, Yourae Hong, Gin Caratù, Hubert Piessevaux,  
+Ashley Heck, Rachel Liu, Max Walter, Megan Vandenberg, Kim Young, Dan McGuire,  
+Evelyn Metzger, Margaret L. Hoang4, Joseph M. Beechem, Sabine Tejpar,  
+Anna Pascual-Reguant* & Holger Heyn*
+
+(Link to preprint to come.)
 
 ## setup
 

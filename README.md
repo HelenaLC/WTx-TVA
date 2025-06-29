@@ -5,7 +5,7 @@ Ashley Heck, Rachel Liu, Max Walter, Megan Vandenberg, Kim Young, Dan McGuire,
 Evelyn Metzger, Margaret L. Hoang4, Joseph M. Beechem, Sabine Tejpar,  
 Anna Pascual-Reguant* & Holger Heyn*
 
-(Link to preprint to come.)
+[PREPRINT](https://doi.org/10.1101/2025.06.23.660674)
 
 ## setup
 
